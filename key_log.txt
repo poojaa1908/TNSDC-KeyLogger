@@ -1,0 +1,10 @@
+Key.alt_lKey.ctrl_l'b'Key.backspaceKey.backspaceKey.rightKey.deleteKey.backspace'\x16'Key.ctrl_lKey.enterKey.
+backspaceKey.caps_lock'k''e''y''l''o''g''g''e'Key.space'r''p''r''o''j''e''c''t'Key.caps_lock'\x18'Key.ctrl_lKey.downKey.up',
+'Key.enter'\x16'Key.ctrl_lKey.backspaceKey.leftKey.rightKey.backspaceKey.backspa
+ceKey.backspaceKey.backspaceKey.backspaceKey.backspaceKey.backspaceKey.end','Key.downKey.caps_lock'g'Key.
+caps_lock'u''n''i'Key.backspaceKey.backspace'i''n''d''u'Key.backspace'y'Key.rightKey.rightKey.rightKey.
+rightKey.rightKey.rightKey.rightKey.rightKey.rightKey.rightKey.rightKey.rightKey.
+rightKey.leftKey.leftKey.leftKey.leftKey.leftKey.ctrl_lKey.alt_lKey.shift'
+F'Key.alt_lKey.shift'S'Key.shiftKey.cmd'F'Key.shiftKey.alt_l'\x13'Key.ctrl_l'\x13'Key.ctrl_lKey.ctrl_l'F'Key.shift'F'Key.
+shiftKey.alt_l'F'Key.shiftKey.alt_lKey.ctrl_l'F'Key.alt_lKey.shiftKey.ctrl_l'
+\x1a''\x1a'Key.ctrl_l'\x1a''\x1a'Key.ctrl_lKey.ctrl_l
