@@ -9,49 +9,66 @@ app.use(bodyParser.json());
 
 const INDEX_NAME = 'incidents_v2';
 
-app.get('/heatmap_channel_severity', async (req, res) => {
+// Function to get unique key names
+const getUniqueKeyNames = async (field) => {
   try {
-    // Refresh the index to ensure we have the latest data
-    await client.indices.refresh({ index: INDEX_NAME });
-
     const body = {
-      size: 0, // We are only interested in the aggregations
+      size: 0, // We're only interested in the aggregations
       aggs: {
-        by_channel_name: {
+        unique_keys: {
           terms: {
-            field: 'channel_name',
-            size: 10000 // Adjust the size as needed
-          },
-          aggs: {
-            by_severity: {
-              terms: {
-                field: 'severity',
-                size: 100 // Adjust the size as needed
-              }
-            }
+            field: field,
+            size: 10000 // Adjust size if needed
           }
         }
       }
     };
 
     const response = await client.search({ index: INDEX_NAME, body });
-
-    // Format the response to create a heatmap data structure
-    const buckets = response.aggregations.by_channel_name.buckets;
-    const heatmapData = {};
-
-    buckets.forEach(channelBucket => {
-      const channelName = channelBucket.key;
-      heatmapData[channelName] = {};
-      channelBucket.by_severity.buckets.forEach(severityBucket => {
-        heatmapData[channelName][severityBucket.key] = severityBucket.doc_count;
-      });
-    });
-
-    res.json(heatmapData);
+    return response.aggregations.unique_keys.buckets.map(bucket => bucket.key);
   } catch (error) {
-    console.error('Error performing search:', error);
-    res.status(500).send('Error performing search');
+    console.error(`Error fetching unique ${field}:`, error);
+    throw error;
+  }
+};
+
+// Endpoint to get unique app names
+app.get('/unique_app_names', async (req, res) => {
+  try {
+    const uniqueAppNames = await getUniqueKeyNames('app_name');
+    res.json(uniqueAppNames);
+  } catch (error) {
+    res.status(500).send('Error fetching unique app names');
+  }
+});
+
+// Endpoint to get unique channel names
+app.get('/unique_channel_names', async (req, res) => {
+  try {
+    const uniqueChannelNames = await getUniqueKeyNames('channel_name');
+    res.json(uniqueChannelNames);
+  } catch (error) {
+    res.status(500).send('Error fetching unique channel names');
+  }
+});
+
+// Endpoint to get unique categories
+app.get('/unique_categories', async (req, res) => {
+  try {
+    const uniqueCategories = await getUniqueKeyNames('category');
+    res.json(uniqueCategories);
+  } catch (error) {
+    res.status(500).send('Error fetching unique categories');
+  }
+});
+
+// Endpoint to get unique severities
+app.get('/unique_severities', async (req, res) => {
+  try {
+    const uniqueSeverities = await getUniqueKeyNames('severity');
+    res.json(uniqueSeverities);
+  } catch (error) {
+    res.status(500).send('Error fetching unique severities');
   }
 });
 
