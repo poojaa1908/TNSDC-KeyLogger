@@ -1,78 +1,49 @@
 const { Client } = require('@elastic/elasticsearch');
-const express = require('express');
-const bodyParser = require('body-parser');
 
-const client = new Client({ node: 'http://localhost:9200' });
-const app = express();
+// Create a new ElasticSearch client
+const client = new Client({ node: 'http://localhost:9200' }); // replace with your ElasticSearch URL
 
-app.use(bodyParser.json());
+async function updateSeverity() {
+    // This will update the severity field in all documents of the specified index
+    const index = 'your-index-name'; // replace with your index name
 
-const INDEX_NAME = 'incidents_v2';
-
-// Function to get unique key names
-const getUniqueKeyNames = async (field) => {
-  try {
-    const body = {
-      size: 0, // We're only interested in the aggregations
-      aggs: {
-        unique_keys: {
-          terms: {
-            field: field,
-            size: 10000 // Adjust size if needed
-          }
+    // Define the script to update severity
+    const script = `
+        if (ctx._source.severity == 2) {
+            ctx._source.severity = 1;
+        } else if (ctx._source.severity == 3) {
+            ctx._source.severity = 2;
+        } else if (ctx._source.severity == 4) {
+            ctx._source.severity = 3;
+        } else if (ctx._source.severity == 5) {
+            ctx._source.severity = 4;
         }
-      }
-    };
+    `;
 
-    const response = await client.search({ index: INDEX_NAME, body });
-    return response.aggregations.unique_keys.buckets.map(bucket => bucket.key);
-  } catch (error) {
-    console.error(`Error fetching unique ${field}:`, error);
-    throw error;
-  }
-};
+    // Perform the update by query operation
+    try {
+        const response = await client.updateByQuery({
+            index: index,
+            body: {
+                script: {
+                    source: script,
+                    lang: 'painless'
+                },
+                query: {
+                    range: {
+                        severity: {
+                            gte: 2,
+                            lte: 5
+                        }
+                    }
+                }
+            }
+        });
 
-// Endpoint to get unique app names
-app.get('/unique_app_names', async (req, res) => {
-  try {
-    const uniqueAppNames = await getUniqueKeyNames('app_name');
-    res.json(uniqueAppNames);
-  } catch (error) {
-    res.status(500).send('Error fetching unique app names');
-  }
-});
+        console.log(`Updated ${response.body.updated} documents.`);
+    } catch (error) {
+        console.error('Error updating documents:', error);
+    }
+}
 
-// Endpoint to get unique channel names
-app.get('/unique_channel_names', async (req, res) => {
-  try {
-    const uniqueChannelNames = await getUniqueKeyNames('channel_name');
-    res.json(uniqueChannelNames);
-  } catch (error) {
-    res.status(500).send('Error fetching unique channel names');
-  }
-});
-
-// Endpoint to get unique categories
-app.get('/unique_categories', async (req, res) => {
-  try {
-    const uniqueCategories = await getUniqueKeyNames('category');
-    res.json(uniqueCategories);
-  } catch (error) {
-    res.status(500).send('Error fetching unique categories');
-  }
-});
-
-// Endpoint to get unique severities
-app.get('/unique_severities', async (req, res) => {
-  try {
-    const uniqueSeverities = await getUniqueKeyNames('severity');
-    res.json(uniqueSeverities);
-  } catch (error) {
-    res.status(500).send('Error fetching unique severities');
-  }
-});
-
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+updateSeverity();
