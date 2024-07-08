@@ -1,49 +1,39 @@
 const { Client } = require('@elastic/elasticsearch');
+const client = new Client({ node: 'http://localhost:9200' });
 
-// Create a new ElasticSearch client
-const client = new Client({ node: 'http://localhost:9200' }); // replace with your ElasticSearch URL
-
-async function updateSeverity() {
-    // This will update the severity field in all documents of the specified index
-    const index = 'your-index-name'; // replace with your index name
-
-    // Define the script to update severity
-    const script = `
-        if (ctx._source.severity == 2) {
-            ctx._source.severity = 1;
-        } else if (ctx._source.severity == 3) {
-            ctx._source.severity = 2;
-        } else if (ctx._source.severity == 4) {
-            ctx._source.severity = 3;
-        } else if (ctx._source.severity == 5) {
-            ctx._source.severity = 4;
-        }
-    `;
-
-    // Perform the update by query operation
+async function fetchSortedData() {
     try {
-        const response = await client.updateByQuery({
-            index: index,
+        const { body } = await client.search({
+            index: 'your-index-name',
             body: {
-                script: {
-                    source: script,
-                    lang: 'painless'
-                },
-                query: {
-                    range: {
-                        severity: {
-                            gte: 2,
-                            lte: 5
+                sort: [
+                    {
+                        _script: {
+                            type: 'number',
+                            script: {
+                                lang: 'painless',
+                                source: `
+                                    if (doc['priority'].value == 1) {
+                                        return 0;
+                                    } else if (doc['priority'].value == 2) {
+                                        return 1;
+                                    } else {
+                                        return 2; // In case there are other priorities
+                                    }
+                                `
+                            },
+                            order: 'asc'
                         }
-                    }
-                }
+                    },
+                    { issue_end_date: { order: 'desc' } }
+                ]
             }
         });
 
-        console.log(`Updated ${response.body.updated} documents.`);
+        console.log('Sorted data:', body.hits.hits.map(hit => hit._source));
     } catch (error) {
-        console.error('Error updating documents:', error);
+        console.error('Error fetching sorted data:', error);
     }
 }
 
-updateSeverity();
+fetchSortedData();
