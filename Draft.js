@@ -1,36 +1,63 @@
-const express = require('express');
+ const express = require('express');
 const bodyParser = require('body-parser');
-const { Pool } = require('pg');
+const { Client } = require('@elastic/elasticsearch');
 
 const app = express();
 const port = 3000;
 
-// PostgreSQL connection setup
-const pool = new Pool({
-  user: 'your_db_user',
-  host: 'localhost',
-  database: 'your_db_name',
-  password: 'your_db_password',
-  port: 5432,
-});
+const client = new Client({ node: 'http://localhost:9200' });
 
-app.use(bodyParser.json()); // for parsing application/json
+// Middleware
+app.use(bodyParser.json());
 
-app.post('/data', async (req, res) => {
-  const { name, age } = req.body; // Assume you're getting name and age from the frontend
+// Define the user schema
+const userSchema = {
+  index: 'users',
+  body: {
+    mappings: {
+      properties: {
+        user_id: { type: 'keyword' },
+        lob: { type: 'text' },
+        tech_stack: { type: 'keyword' },
+        last_login_date: { type: 'date' }
+      }
+    }
+  }
+};
 
+// Create the index with the schema
+async function createIndex() {
   try {
-    const query = 'INSERT INTO your_table_name (name, age) VALUES ($1, $2)';
-    const values = [name, age];
+    const exists = await client.indices.exists({ index: 'users' });
+    if (!exists) {
+      await client.indices.create(userSchema);
+      console.log('Index created successfully');
+    } else {
+      console.log('Index already exists');
+    }
+  } catch (error) {
+    console.error('Error creating index:', error);
+  }
+}
 
-    await pool.query(query, values);
-    res.status(201).send('Data inserted successfully');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error inserting data');
+// Endpoint to add a new user
+app.post('/addUser', async (req, res) => {
+  const user = req.body;
+  try {
+    await client.index({
+      index: 'users',
+      body: user
+    });
+    res.status(201).send('User added successfully');
+  } catch (error) {
+    console.error('Error adding user:', error);
+    res.status(500).send('Error adding user');
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});q
+// Initialize the index and start the server
+createIndex().then(() => {
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
+});
