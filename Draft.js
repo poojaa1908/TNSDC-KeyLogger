@@ -1,39 +1,36 @@
-const { Client } = require('@elastic/elasticsearch');
-const client = new Client({ node: 'http://localhost:9200' });
+const express = require('express');
+const bodyParser = require('body-parser');
+const { Pool } = require('pg');
 
-async function fetchSortedData() {
-    try {
-        const { body } = await client.search({
-            index: 'your-index-name',
-            body: {
-                sort: [
-                    {
-                        _script: {
-                            type: 'number',
-                            script: {
-                                lang: 'painless',
-                                source: `
-                                    if (doc['priority'].value == 1) {
-                                        return 0;
-                                    } else if (doc['priority'].value == 2) {
-                                        return 1;
-                                    } else {
-                                        return 2; // In case there are other priorities
-                                    }
-                                `
-                            },
-                            order: 'asc'
-                        }
-                    },
-                    { issue_end_date: { order: 'desc' } }
-                ]
-            }
-        });
+const app = express();
+const port = 3000;
 
-        console.log('Sorted data:', body.hits.hits.map(hit => hit._source));
-    } catch (error) {
-        console.error('Error fetching sorted data:', error);
-    }
-}
+// PostgreSQL connection setup
+const pool = new Pool({
+  user: 'your_db_user',
+  host: 'localhost',
+  database: 'your_db_name',
+  password: 'your_db_password',
+  port: 5432,
+});
 
-fetchSortedData();
+app.use(bodyParser.json()); // for parsing application/json
+
+app.post('/data', async (req, res) => {
+  const { name, age } = req.body; // Assume you're getting name and age from the frontend
+
+  try {
+    const query = 'INSERT INTO your_table_name (name, age) VALUES ($1, $2)';
+    const values = [name, age];
+
+    await pool.query(query, values);
+    res.status(201).send('Data inserted successfully');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error inserting data');
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});q
