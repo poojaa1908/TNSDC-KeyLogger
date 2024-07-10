@@ -8,43 +8,35 @@ const indexName = 'user_checklist';
 
 app.use(bodyParser.json());
 
-// Route to update checklist for a specific field
-app.put('/update/:field', async (req, res) => {
+// Route to "delete" documents based on a field value
+app.delete('/delete/:field', async (req, res) => {
   const field = req.params.field;
-  const { oldValue, newValue } = req.body;
+  const { valueToDelete } = req.body;
 
   try {
-    // Query documents where the field matches the old value
-    const { body: searchBody } = await client.search({
+    // Use update_by_query to "delete" documents
+    const { body: updateResponse } = await client.updateByQuery({
       index: indexName,
       body: {
+        script: {
+          lang: 'painless',
+          source: `ctx._source.remove('${field}')`
+        },
         query: {
           match: {
-            [field]: oldValue
+            [field]: valueToDelete
           }
         }
       }
     });
 
-    // Extract document IDs from search results
-    const documentsToUpdate = searchBody.hits.hits.map(hit => hit._id);
-
-    // Bulk update operation
-    const body = documentsToUpdate.flatMap(id => [
-      { update: { _index: indexName, _id: id } },
-      { doc: { [field]: newValue } }
-    ]);
-
-    // Execute bulk update
-    const { body: bulkResponse } = await client.bulk({ refresh: true, body });
-
-    res.status(200).json({ message: 'Documents updated', bulkResponse });
+    res.status(200).json({ message: 'Documents "deleted"', updateResponse });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating documents', error });
+    res.status(500).json({ message: 'Error deleting documents', error });
   }
 });
 
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-});
+});q
