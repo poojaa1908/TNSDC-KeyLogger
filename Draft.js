@@ -1,122 +1,104 @@
 const express = require('express');
 const { Client } = require('@elastic/elasticsearch');
+const bodyParser = require('body-parser');
 
-const client = new Client({ node: 'http://localhost:9200' });
 const app = express();
-const port = 3000;
+const client = new Client({ node: 'http://localhost:9200' });
+const indexName = 'user_checklist';
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Endpoint to insert a single checklist item into a specific field
+// Route to insert a new document
 app.post('/insert', async (req, res) => {
+  const document = req.body;
+
   try {
-    const { field, checklistItem } = req.body;
-
-    if (!['admin', 'manager', 'developer'].includes(field)) {
-      return res.status(400).json({ error: 'Invalid field specified' });
-    }
-
-    // Fetch the existing document
-    const { body: searchBody } = await client.search({
-      index: 'checklist',
-      body: {
-        query: {
-          match_all: {}
-        }
-      }
+    const { body } = await client.index({
+      index: indexName,
+      body: document
     });
-
-    let documentId;
-    let existingChecklist = [];
-
-    if (searchBody.hits.total.value > 0) {
-      const existingDoc = searchBody.hits.hits[0];
-      documentId = existingDoc._id;
-      existingChecklist = existingDoc._source[field] || [];
-    }
-
-    // Add the new checklist item
-    existingChecklist.push({ item: checklistItem });
-
-    // Create or update the document
-    const { body: response } = await client.index({
-      index: 'checklist',
-      id: documentId,
-      body: {
-        [field]: existingChecklist
-      },
-      refresh: true
-    });
-
-    res.json(response);
+    res.status(200).json({ message: 'Document inserted', body });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: 'Error inserting document', error });
   }
 });
 
-// Endpoint to fetch existing checklists
-app.get('/checklists', async (req, res) => {
+// Route to get checklists by persona field
+app.get('/checklists/:field', async (req, res) => {
+  const field = req.params.field;
+
   try {
     const { body } = await client.search({
-      index: 'checklist',
-      body: {
-        query: {
-          match_all: {}
-        }
+      index: indexName,
+      _source: [field],
+      query: {
+        match_all: {}
       }
     });
-
-    res.json(body.hits.hits.map(hit => hit._source));
+    res.status(200).json({ message: 'Checklists retrieved', checklists: body.hits.hits });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: 'Error retrieving checklists', error });
   }
 });
 
-// Endpoint to update existing checklist
+// Route to update a checklist for a specific persona
 app.put('/update/:field', async (req, res) => {
+  const field = req.params.field;
+  const { documentId, newChecklist } = req.body;
+
   try {
-    const { field } = req.params;
-    const { checklist } = req.body;
-
-    if (!['admin', 'manager', 'developer'].includes(field)) {
-      return res.status(400).json({ error: 'Invalid field specified' });
-    }
-
-    // Fetch the existing document
-    const { body: searchBody } = await client.search({
-      index: 'checklist',
-      body: {
-        query: {
-          match_all: {}
-        }
-      }
-    });
-
-    let documentId;
-
-    if (searchBody.hits.total.value > 0) {
-      const existingDoc = searchBody.hits.hits[0];
-      documentId = existingDoc._id;
-    }
-
-    // Update the document
-    const { body: response } = await client.index({
-      index: 'checklist',
+    const { body } = await client.update({
+      index: indexName,
       id: documentId,
       body: {
-        [field]: checklist.map(item => ({ item }))
-      },
-      refresh: true
+        doc: {
+          [field]: newChecklist
+        }
+      }
     });
-
-    res.json(response);
+    res.status(200).json({ message: 'Checklist updated', body });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: 'Error updating checklist', error });
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-}); 
+// Route to delete an item from a checklist for a specific persona
+app.delete('/delete/:field', async (req, res) => {
+  const field = req.params.field;
+  const { documentId, itemToDelete } = req.body;
+
+  try {
+    // Get the current checklist
+    const { body: getBody } = await client.get({
+      index: indexName,
+      id: documentId
+    });
+
+    let checklist = getBody._source[field];
+    if (!checklist) {
+      return res.status(404).json({ message: 'Field not found' });
+    }
+
+    // Remove the item from the checklist
+    checklist = checklist.filter(item => item !== itemToDelete);
+
+    // Update the document with the new checklist
+    const { body } = await client.update({
+      index: indexName,
+      id: documentId,
+      body: {
+        doc: {
+          [field]: checklist
+        }
+      }
+    });
+    res.status(200).json({ message: 'Item deleted from checklist', body });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting item from checklist', error });
+  }
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
