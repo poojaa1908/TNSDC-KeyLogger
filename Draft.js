@@ -1,63 +1,122 @@
- const express = require('express');
-const bodyParser = require('body-parser');
+const express = require('express');
 const { Client } = require('@elastic/elasticsearch');
 
+const client = new Client({ node: 'http://localhost:9200' });
 const app = express();
 const port = 3000;
 
-const client = new Client({ node: 'http://localhost:9200' });
+// Middleware to parse JSON bodies
+app.use(express.json());
 
-// Middleware
-app.use(bodyParser.json());
+// Endpoint to insert a single checklist item into a specific field
+app.post('/insert', async (req, res) => {
+  try {
+    const { field, checklistItem } = req.body;
 
-// Define the user schema
-const userSchema = {
-  index: 'users',
-  body: {
-    mappings: {
-      properties: {
-        user_id: { type: 'keyword' },
-        lob: { type: 'text' },
-        tech_stack: { type: 'keyword' },
-        last_login_date: { type: 'date' }
+    if (!['admin', 'manager', 'developer'].includes(field)) {
+      return res.status(400).json({ error: 'Invalid field specified' });
+    }
+
+    // Fetch the existing document
+    const { body: searchBody } = await client.search({
+      index: 'checklist',
+      body: {
+        query: {
+          match_all: {}
+        }
       }
-    }
-  }
-};
-
-// Create the index with the schema
-async function createIndex() {
-  try {
-    const exists = await client.indices.exists({ index: 'users' });
-    if (!exists) {
-      await client.indices.create(userSchema);
-      console.log('Index created successfully');
-    } else {
-      console.log('Index already exists');
-    }
-  } catch (error) {
-    console.error('Error creating index:', error);
-  }
-}
-
-// Endpoint to add a new user
-app.post('/addUser', async (req, res) => {
-  const user = req.body;
-  try {
-    await client.index({
-      index: 'users',
-      body: user
     });
-    res.status(201).send('User added successfully');
+
+    let documentId;
+    let existingChecklist = [];
+
+    if (searchBody.hits.total.value > 0) {
+      const existingDoc = searchBody.hits.hits[0];
+      documentId = existingDoc._id;
+      existingChecklist = existingDoc._source[field] || [];
+    }
+
+    // Add the new checklist item
+    existingChecklist.push({ item: checklistItem });
+
+    // Create or update the document
+    const { body: response } = await client.index({
+      index: 'checklist',
+      id: documentId,
+      body: {
+        [field]: existingChecklist
+      },
+      refresh: true
+    });
+
+    res.json(response);
   } catch (error) {
-    console.error('Error adding user:', error);
-    res.status(500).send('Error adding user');
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Initialize the index and start the server
-createIndex().then(() => {
-  app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
+// Endpoint to fetch existing checklists
+app.get('/checklists', async (req, res) => {
+  try {
+    const { body } = await client.search({
+      index: 'checklist',
+      body: {
+        query: {
+          match_all: {}
+        }
+      }
+    });
+
+    res.json(body.hits.hits.map(hit => hit._source));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
+
+// Endpoint to update existing checklist
+app.put('/update/:field', async (req, res) => {
+  try {
+    const { field } = req.params;
+    const { checklist } = req.body;
+
+    if (!['admin', 'manager', 'developer'].includes(field)) {
+      return res.status(400).json({ error: 'Invalid field specified' });
+    }
+
+    // Fetch the existing document
+    const { body: searchBody } = await client.search({
+      index: 'checklist',
+      body: {
+        query: {
+          match_all: {}
+        }
+      }
+    });
+
+    let documentId;
+
+    if (searchBody.hits.total.value > 0) {
+      const existingDoc = searchBody.hits.hits[0];
+      documentId = existingDoc._id;
+    }
+
+    // Update the document
+    const { body: response } = await client.index({
+      index: 'checklist',
+      id: documentId,
+      body: {
+        [field]: checklist.map(item => ({ item }))
+      },
+      refresh: true
+    });
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+}); 
