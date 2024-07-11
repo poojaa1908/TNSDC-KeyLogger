@@ -1,5 +1,6 @@
-   const channels = response.aggregations.channels.buckets;
-    const result = {};
+   
+    const channels = response.aggregations.channels.buckets;
+    const result = [];
 
     channels.forEach(channel => {
       const counts = [0, 0, 0, 0]; // Initialize the counts for each severity level
@@ -9,12 +10,10 @@
           counts[severityIndex] = severity.doc_count;
         }
       });
-      result[channel.key] = counts;
+      result.push({ channel_name: channel.key, counts });
     });
 
     res.json(result);
   } catch (error) {
     console.error('Error performing search:', error);
-    res.status(500).send('Error performing search');
-  }
-});
+    res.status(500).send('Error performing search'
