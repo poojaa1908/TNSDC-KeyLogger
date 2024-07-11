@@ -1,34 +1,20 @@
-app.put('/users/:userId', async (req, res) => {
-  const { userId } = req.params;
-  const { lob, techStack } = req.body;
+   const channels = response.aggregations.channels.buckets;
+    const result = {};
 
-  try {
-    // Fetch the existing user data
-    const { body } = await client.get({
-      index: 'users',
-      id: userId
+    channels.forEach(channel => {
+      const counts = [0, 0, 0, 0]; // Initialize the counts for each severity level
+      channel.severities.buckets.forEach(severity => {
+        const severityIndex = parseInt(severity.key, 10) - 1;
+        if (severityIndex >= 0 && severityIndex < 4) {
+          counts[severityIndex] = severity.doc_count;
+        }
+      });
+      result[channel.key] = counts;
     });
 
-    const existingUser = body._source;
-
-    // Update only the fields provided
-    const updatedUser = {
-      ...existingUser,
-      ...(lob !== undefined && { lob }), // Update lob if provided
-      ...(techStack !== undefined && { tech_stack: techStack }) // Update tech_stack if provided
-    };
-
-    await client.update({
-      index: 'users',
-      id: userId,
-      body: {
-        doc: updatedUser
-      }
-    });
-
-    res.send({ message: 'User profile updated' });
+    res.json(result);
   } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: 'Failed to update user profile' });
+    console.error('Error performing search:', error);
+    res.status(500).send('Error performing search');
   }
-}); 
+});
