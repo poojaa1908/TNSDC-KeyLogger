@@ -1,85 +1,92 @@
-const { Client } = require('@elastic/elasticsearch');
-const express = require('express');
-const bodyParser = require('body-parser');
+// src/components/ChecklistManager.js
+import React, { useState, useEffect } from 'react';
+import axiosInstance from '../api/axiosInstance';
 
-const client = new Client({ node: 'http://localhost:9200' });
-const app = express();
+const ChecklistManager = () => {
+  const [personas, setPersonas] = useState(['manager', 'developer', 'code_reviewer']); // Add more personas as needed
+  const [selectedPersona, setSelectedPersona] = useState(null);
+  const [checklists, setChecklists] = useState([]);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
 
-app.use(bodyParser.json());
-
-const INDEX_NAME = 'incidents_v2';
-
-app.get('/top_apps', async (req, res) => {
-  const { startDate, endDate, size = 5 } = req.query;
-
-  const queryObj = {
-    bool: {
-      must: [],
-      filter: []
+  useEffect(() => {
+    if (selectedPersona) {
+      axiosInstance.get(`/get-all-checklists/${selectedPersona}`)
+        .then(response => {
+          setChecklists(response.data.checklist);
+        })
+        .catch(error => {
+          console.error('Error fetching checklists:', error);
+        });
     }
+  }, [selectedPersona]);
+
+  const handleAddChecklistItem = () => {
+    axiosInstance.post(`/insert-checklist/${selectedPersona}`, { item: newChecklistItem })
+      .then(response => {
+        setChecklists([...checklists, newChecklistItem]);
+        setNewChecklistItem('');
+      })
+      .catch(error => {
+        console.error('Error adding checklist item:', error);
+      });
   };
 
-  if (startDate || endDate) {
-    const dateRange = {};
-    if (startDate) dateRange.gte = startDate;
-    if (endDate) dateRange.lte = endDate;
-    queryObj.bool.filter.push({ range: { issue_start_date: dateRange } });
-  }
+  const handleUpdateChecklist = () => {
+    axiosInstance.put(`/update-checklist/${selectedPersona}`, { checklist: checklists })
+      .then(response => {
+        console.log('Checklist updated successfully');
+      })
+      .catch(error => {
+        console.error('Error updating checklist:', error);
+      });
+  };
 
-  try {
-    const body = {
-      size: 0,  // We're only interested in the aggregations
-      query: queryObj,
-      aggs: {
-        by_app_name: {
-          terms: {
-            field: 'app_name.keyword',  // Ensure the field is keyword for terms aggregation
-            size: 10000  // Adjust if needed
-          },
-          aggs: {
-            mean_time_to_resolve: {
-              avg: {
-                script: {
-                  source: "if (doc['issue_end_date'].size() > 0 && doc['issue_start_date'].size() > 0) { return doc['issue_end_date'].value.toInstant().toEpochMilli() - doc['issue_start_date'].value.toInstant().toEpochMilli(); } else { return 0; }"
-                }
-              }
-            },
-            sorted_bucket: {
-              bucket_sort: {
-                sort: [
-                  { "mean_time_to_resolve": { order: "desc" } }
-                ],
-                size: parseInt(size)
-              }
-            },
-            top_incidents: {
-              top_hits: {
-                _source: {
-                  includes: ['app_name', 'issue_start_date', 'issue_end_date', 'severity', 'channel_name']  // Add any other fields you want to return
-                },
-                size: 5  // Adjust the number of incidents to return per app
-              }
-            }
-          }
-        }
-      }
-    };
+  const handleDeleteChecklistItem = (index) => {
+    const updatedChecklists = checklists.filter((item, i) => i !== index);
+    setChecklists(updatedChecklists);
+  };
 
-    const startTime = Date.now();
-    const response = await client.search({ index: INDEX_NAME, body });
-    const endTime = Date.now();
-    const timeTaken = response.body.took;
+  const handleEditChecklistItem = (index, newValue) => {
+    const updatedChecklists = checklists.map((item, i) => i === index ? newValue : item);
+    setChecklists(updatedChecklists);
+  };
 
-    console.log(`Query executed in ${timeTaken}ms (Server Time: ${endTime - startTime}ms)`);
+  return (
+    <div>
+      {personas.map(persona => (
+        <div key={persona}>
+          <button onClick={() => setSelectedPersona(persona)}>
+            {persona}
+          </button>
+        </div>
+      ))}
+      {selectedPersona && (
+        <div>
+          <h2>{selectedPersona} Checklist</h2>
+          <ul>
+            {checklists.map((item, index) => (
+              <li key={index}>
+                <input
+                  type="text"
+                  value={item}
+                  onChange={(e) => handleEditChecklistItem(index, e.target.value)}
+                />
+                <button onClick={() => handleDeleteChecklistItem(index)}>Delete</button>
+              </li>
+            ))}
+          </ul>
+          <input
+            type="text"
+            value={newChecklistItem}
+            onChange={(e) => setNewChecklistItem(e.target.value)}
+            placeholder="New checklist item"
+          />
+          <button onClick={handleAddChecklistItem}>Add</button>
+          <button onClick={handleUpdateChecklist}>Submit</button>
+        </div>
+      )}
+    </div>
+  );
+};
 
-    res.json(response.aggregations.by_app_name.buckets);
-  } catch (error) {
-    console.error('Error performing search:', error);
-    res.status(500).send('Error performing search');
-  }
-});
-
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+export default ChecklistManager;
