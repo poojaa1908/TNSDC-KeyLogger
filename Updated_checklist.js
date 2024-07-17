@@ -11,28 +11,68 @@ const port = 3001;
 app.use(bodyParser.json());
 app.use(cors());
 
-// Insert checklist items for a specific persona
+// Insert or update checklist items for a specific persona
 app.post('/checklists', async (req, res) => {
   const { persona, issue_id, checklist } = req.body;
 
-  if (!persona || !issue_id || !checklist) {
-    return res.status(400).send('Persona, issue_id, and checklist are required.');
+  if (!persona || !issue_id) {
+    return res.status(400).send('Persona and issue_id are required.');
   }
 
   try {
-    await client.index({
+    // Check if a document with the same persona and issue_id already exists
+    const { body } = await client.search({
       index: 'checklists',
       body: {
-        persona,
-        issue_id,
-        checklist
+        query: {
+          bool: {
+            must: [
+              { match: { persona } },
+              { match: { issue_id } }
+            ]
+          }
+        }
       }
     });
 
-    res.status(200).send('Data added successfully.');
+    if (body.hits.total.value > 0) {
+      // Document exists
+      const existingDoc = body.hits.hits[0];
+
+      if (checklist === "") {
+        // If checklist is empty, delete the existing document
+        await client.delete({
+          index: 'checklists',
+          id: existingDoc._id
+        });
+        return res.status(200).send('Existing document deleted successfully.');
+      } else {
+        // Update the existing document
+        await client.update({
+          index: 'checklists',
+          id: existingDoc._id,
+          body: {
+            doc: { checklist }
+          }
+        });
+        return res.status(200).send('Existing document updated successfully.');
+      }
+    } else {
+      // Document does not exist, insert a new document
+      await client.index({
+        index: 'checklists',
+        body: {
+          persona,
+          issue_id,
+          checklist
+        }
+      });
+
+      return res.status(200).send('Data added successfully.');
+    }
   } catch (error) {
-    console.error('Error inserting data:', error);
-    res.status(500).send('Error inserting data.');
+    console.error('Error handling data:', error);
+    return res.status(500).send('Error handling data.');
   }
 });
 
