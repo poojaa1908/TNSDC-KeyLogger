@@ -1,0 +1,87 @@
+Got it — you want an implementation plan to raise a normal SSAT Change Request in ServiceNow based on the details from your image.
+
+Here’s a professional Implementation Plan you can directly use (or slightly modify based on your company’s format):
+
+⸻
+
+Implementation Plan for SSAT Normal Change Request (ServiceNow)
+
+Change Title:
+APIGE Code Fix and Service Account Addition for Dataverse API in Production Environments
+
+Change Description:
+Create an implementation plan to deploy the following updates:
+	1.	Add Dataverse SPN to all Production environments.
+	2.	Add Service Account for PowerBI reporting to all Production environments.
+	3.	Apply APIGE code changes for dynamic environment logic updates.
+
+⸻
+
+Pre-Implementation Tasks:
+	•	Review and validate the attached documentation:
+	•	Sample CHG2955540 (Prod Update SPN.docx)
+	•	Sample CHG2546562 (Implementation steps.docx)
+	•	Coordinate with the APIGE team for dynamic environment code update readiness.
+	•	Verify access permissions to the production environments listed.
+	•	Notify impacted stakeholders regarding scheduled change timing.
+
+⸻
+
+Implementation Steps:
+	1.	Dataverse SPN Addition:
+	•	Access each environment listed below.
+	•	Add the new Dataverse SPN as per the attached SPN update document (CHG2955540).
+	•	Confirm SPN addition through environment-specific verification steps.
+	2.	Service Account Addition for PowerBI Reporting:
+	•	Implement service account updates following guidelines from CHG2546562.
+	•	Validate successful account linkage by performing a connection test.
+	3.	APIGE Code Fix Deployment:
+	•	Collaborate with the APIGE team to apply dynamic environment code changes.
+	•	Deploy the latest APIGE update scripts to each environment sequentially.
+	•	Monitor for any deployment failures and perform rollbacks if necessary.
+	4.	Environment Specific Scope:
+	•	Strategy_Digital_And_Innovation_Strategic_Services_And_Advanced_PT1A-ICHT-prod1
+	•	Strategy_Digital_And_Innovation_Strategic_Services_And_Advanced_PT1A-ICHT-prod2
+	•	Strategy_Digital_And_Innovation_Strategic_Services_And_Advanced_PT1A-ICHT-prod3
+
+⸻
+
+Post-Implementation Steps:
+	•	Validate environment accessibility and functionality post-change.
+	•	Confirm that the Dataverse SPN and Service Account configurations are active and functional.
+	•	Validate that the APIGE dynamic environment logic is properly updating in real-time.
+	•	Inform stakeholders upon successful completion.
+
+⸻
+
+Backout Plan:
+	•	Revert Dataverse SPN and Service Account changes by removing newly added configurations.
+	•	Restore previous APIGE code versions if any functional issues are detected.
+	•	Engage APIGE team support for urgent rollback if automated rollback fails.
+
+⸻
+
+Risk Assessment:
+	•	Low to Moderate (Changes are scoped, documented, and coordinated with respective teams. Minor service interruptions possible during APIGE deployment.)
+
+⸻
+
+Communication Plan:
+	•	Notify impacted application owners before and after the change window.
+	•	Real-time updates via Teams/Email communication during change execution.
+	•	Send completion confirmation with environment health status post-implementation.
+
+⸻
+
+Attachments:
+	•	SPN Update Sample Document
+	•	Service Account Implementation Document
+	•	Environment Scope and IDs
+
+⸻
+
+This format is perfect for ServiceNow Normal Change Requests in SSAT environment.
+
+⸻
+
+Would you also like me to give you a shorter one for the “Change Request Notes” section if needed? (That’s usually more compact.)
