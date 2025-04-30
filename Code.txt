@@ -1,4 +1,19 @@
-let
+= Table.AddColumn(PreviousStepName, "ExpandedHits", each 
+    let
+        original = [hits],
+        len = List.Count(original),
+        padded = 
+            if len = 6 then original
+            else if len = 5 then original & {null}
+            else if len = 4 then original & {null, null}
+            else if len = 3 then original & {null, null, null}
+            else if len = 2 then original & {null, null, null, null}
+            else if len = 1 then original & {null, null, null, null, null}
+            else {null, null, null, null, null, null},
+        record = Record.FromList(padded, {"hit1", "hit2", "hit3", "hit4", "hit5", "hit6"})
+    in
+        record
+)
     // Step 1: Starting from your original table
     Source = YourPreviousStep, 
     
