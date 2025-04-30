@@ -1,0 +1,22 @@
+= Table.TransformColumns(
+    Table.Group(Source, {"Conv Id"}, {
+        {"Data", each 
+            let 
+                dids = List.Transform([did], each _),
+                feedbacks = List.Transform([feedback], each _),
+                columns = Record.Combine(
+                    List.Zip({
+                        List.Transform({1..List.Count(dids)}, each "did" & Text.From(_)),
+                        dids
+                    }) & 
+                    List.Zip({
+                        List.Transform({1..List.Count(feedbacks)}, each "feedback" & Text.From(_)),
+                        feedbacks
+                    })
+                )
+            in
+                columns
+        }
+    }),
+    {"Data", each _, type record}
+)
