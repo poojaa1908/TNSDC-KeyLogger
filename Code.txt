@@ -1,21 +1,23 @@
 = Table.TransformColumns(
-    Table.Group(Source, {"Conv Id"}, {
+    Table.Group(Source, {"Conversation_Transcript_ID"}, {
         {"Data", each 
-            let 
-                dids = List.Transform([did], each _),
-                feedbacks = List.Transform([feedback], each _),
-                columns = Record.Combine(
-                    List.Zip({
-                        List.Transform({1..List.Count(dids)}, each "did" & Text.From(_)),
-                        dids
-                    }) & 
-                    List.Zip({
-                        List.Transform({1..List.Count(feedbacks)}, each "feedback" & Text.From(_)),
-                        feedbacks
-                    })
-                )
+            let
+                dids = [did_that_Answer_Your_Question],
+                choices = [feedback_Choice],
+                texts = [feedback_Text],
+                output = [
+                    did_that_Answer_Your_Question1 = try dids{0} otherwise null, feedback_Choice1 = try choices{0} otherwise null, feedback_Text1 = try texts{0} otherwise null,
+                    did_that_Answer_Your_Question2 = try dids{1} otherwise null, feedback_Choice2 = try choices{1} otherwise null, feedback_Text2 = try texts{1} otherwise null,
+                    did_that_Answer_Your_Question3 = try dids{2} otherwise null, feedback_Choice3 = try choices{2} otherwise null, feedback_Text3 = try texts{2} otherwise null,
+                    did_that_Answer_Your_Question4 = try dids{3} otherwise null, feedback_Choice4 = try choices{3} otherwise null, feedback_Text4 = try texts{3} otherwise null,
+                    did_that_Answer_Your_Question5 = try dids{4} otherwise null, feedback_Choice5 = try choices{4} otherwise null, feedback_Text5 = try texts{4} otherwise null,
+                    did_that_Answer_Your_Question6 = try dids{5} otherwise null, feedback_Choice6 = try choices{5} otherwise null, feedback_Text6 = try texts{5} otherwise null,
+                    did_that_Answer_Your_Question7 = try dids{6} otherwise null, feedback_Choice7 = try choices{6} otherwise null, feedback_Text7 = try texts{6} otherwise null,
+                    did_that_Answer_Your_Question8 = try dids{7} otherwise null, feedback_Choice8 = try choices{7} otherwise null, feedback_Text8 = try texts{7} otherwise null,
+                    did_that_Answer_Your_Question9 = try dids{8} otherwise null, feedback_Choice9 = try choices{8} otherwise null, feedback_Text9 = try texts{8} otherwise null
+                ]
             in
-                columns
+                output
         }
     }),
     {"Data", each _, type record}
