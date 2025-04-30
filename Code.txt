@@ -1,24 +1,25 @@
-= Table.TransformColumns(
-    Table.Group(Source, {"Conversation_Transcript_ID"}, {
-        {"Data", each 
-            let
-                dids = [did_that_Answer_Your_Question],
-                choices = [feedback_Choice],
-                texts = [feedback_Text],
-                output = [
-                    did_that_Answer_Your_Question1 = try dids{0} otherwise null, feedback_Choice1 = try choices{0} otherwise null, feedback_Text1 = try texts{0} otherwise null,
-                    did_that_Answer_Your_Question2 = try dids{1} otherwise null, feedback_Choice2 = try choices{1} otherwise null, feedback_Text2 = try texts{1} otherwise null,
-                    did_that_Answer_Your_Question3 = try dids{2} otherwise null, feedback_Choice3 = try choices{2} otherwise null, feedback_Text3 = try texts{2} otherwise null,
-                    did_that_Answer_Your_Question4 = try dids{3} otherwise null, feedback_Choice4 = try choices{3} otherwise null, feedback_Text4 = try texts{3} otherwise null,
-                    did_that_Answer_Your_Question5 = try dids{4} otherwise null, feedback_Choice5 = try choices{4} otherwise null, feedback_Text5 = try texts{4} otherwise null,
-                    did_that_Answer_Your_Question6 = try dids{5} otherwise null, feedback_Choice6 = try choices{5} otherwise null, feedback_Text6 = try texts{5} otherwise null,
-                    did_that_Answer_Your_Question7 = try dids{6} otherwise null, feedback_Choice7 = try choices{6} otherwise null, feedback_Text7 = try texts{6} otherwise null,
-                    did_that_Answer_Your_Question8 = try dids{7} otherwise null, feedback_Choice8 = try choices{7} otherwise null, feedback_Text8 = try texts{7} otherwise null,
-                    did_that_Answer_Your_Question9 = try dids{8} otherwise null, feedback_Choice9 = try choices{8} otherwise null, feedback_Text9 = try texts{8} otherwise null
-                ]
-            in
-                output
-        }
+let
+    // Step 1: Starting from your original table
+    Source = YourPreviousStep, 
+    
+    // Step 2: Add index to preserve original row
+    WithIndex = Table.AddIndexColumn(Source, "RowID", 0, 1, Int64.Type),
+
+    // Step 3: Expand hits list to rows
+    ExpandedHits = Table.ExpandListColumn(WithIndex, "BotResponse.hits"),
+
+    // Step 4: Add index per original RowID group to mark hit1, hit2, ...
+    Grouped = Table.Group(ExpandedHits, {"RowID"}, {
+        {"AllHits", each Table.AddIndexColumn(_, "HitIndex", 1, 1, Int64.Type)}
     }),
-    {"Data", each _, type record}
-)
+
+    // Step 5: Expand grouped table back
+    ExpandedGrouped = Table.ExpandTableColumn(Grouped, "AllHits", {"BotResponse.hits", "RowID", "searchKeyword", "HitIndex"}),
+
+    // Step 6: Pivot so that HitIndex values become column names
+    Pivoted = Table.Pivot(ExpandedGrouped, List.Distinct(ExpandedGrouped[HitIndex]), "HitIndex", "BotResponse.hits"),
+
+    // Step 7: Remove duplicate RowID column if needed
+    Final = Table.RemoveColumns(Pivoted, {"RowID"})
+in
+    Final
