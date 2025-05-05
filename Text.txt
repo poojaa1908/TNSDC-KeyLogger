@@ -1,17 +1,9 @@
-let
-    Source = PreviousStepName,
+I’ve published the GPLVA Virtual Assistant bot’s report in the QA ENT environment (PTIA - TEST).
 
-    // Step 1: Add a record per row where list becomes a record like [hit1=..., hit2=..., ...]
-    WithRecord = Table.AddColumn(Source, "ExpandedHits", each 
-        let
-            lst = if Value.Is([hits], type list) then [hits] else {},
-            colNames = List.Transform({1..List.Count(lst)}, each "hit" & Text.From(_)),
-            rec = Record.FromList(lst, colNames)
-        in
-            rec
-    ),
+As discussed during our meeting, I’ve been able to model all the required details except for the User_Feedback section. To address this, I’ll need an array of responses with the scope field attached. This will help us distinguish between context-based responses and others.
 
-    // Step 2: Expand all dynamically present fields in all rows
-    Expanded = Table.ExpandRecordColumn(WithRecord, "ExpandedHits")
-in
-    Expanded
+I’ve also updated the error chart to reflect only the entries where isError is true and the unhandled errors. The chart now shows the summation of both categories.
+
+Please review the report and share your feedback. Do suggest any changes required, especially in the JSON structure, and let me know once done.
+
+Thank you!
