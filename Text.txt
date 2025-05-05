@@ -1,22 +1,17 @@
 let
     Source = PreviousStepName,
 
-    // Step 1: Find the maximum list length across all rows
-    MaxLength = List.Max(List.Transform(Source[hits], each if Value.Is(_, type list) then List.Count(_) else 0)),
-
-    // Step 2: Generate column names dynamically: "hit1", "hit2", ..., "hitN"
-    ColumnNames = List.Transform({1..MaxLength}, each "hit" & Text.From(_)),
-
-    // Step 3: Add new column that transforms list to record with those column names
+    // Step 1: Add a record per row where list becomes a record like [hit1=..., hit2=..., ...]
     WithRecord = Table.AddColumn(Source, "ExpandedHits", each 
         let
             lst = if Value.Is([hits], type list) then [hits] else {},
-            rec = Record.FromList(lst, ColumnNames)
+            colNames = List.Transform({1..List.Count(lst)}, each "hit" & Text.From(_)),
+            rec = Record.FromList(lst, colNames)
         in
             rec
     ),
 
-    // Step 4: Expand the record into individual columns
-    Expanded = Table.ExpandRecordColumn(WithRecord, "ExpandedHits", ColumnNames)
+    // Step 2: Expand all dynamically present fields in all rows
+    Expanded = Table.ExpandRecordColumn(WithRecord, "ExpandedHits")
 in
     Expanded
