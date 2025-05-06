@@ -1,9 +1,50 @@
-I’ve published the GPLVA Virtual Assistant bot’s report in the QA ENT environment (PTIA - TEST).
+Deleting or destroying an agent in a managed environment within Microsoft Copilot Studio can be complex due to the nature of managed solutions in the Power Platform. Here’s a step-by-step guide to help you through the process: ￼
 
-As discussed during our meeting, I’ve been able to model all the required details except for the User_Feedback section. To address this, I’ll need an array of responses with the scope field attached. This will help us distinguish between context-based responses and others.
+⸻
 
-I’ve also updated the error chart to reflect only the entries where isError is true and the unhandled errors. The chart now shows the summation of both categories.
+🧩 Understanding Managed Environments and Agents
+	•	Managed Solutions: These are sealed packages where components (like agents) are locked to prevent unintended changes.
+	•	Unmanaged Solutions: These are editable and allow for modifications or deletions of components. ￼
 
-Please review the report and share your feedback. Do suggest any changes required, especially in the JSON structure, and let me know once done.
+In managed environments, agents are part of managed solutions, which restrict direct deletion or modification.
 
-Thank you!
+⸻
+
+🛠️ Steps to Remove an Agent in a Managed Environment
+	1.	Identify the Solution Containing the Agent:
+	•	Navigate to the Power Platform Admin Center.
+	•	Select the appropriate environment.
+	•	Go to Solutions and locate the managed solution that includes the agent. ￼ ￼
+	2.	Check for Dependencies:
+	•	Open the solution and identify any dependencies associated with the agent.
+	•	Attempt to remove these dependencies.
+	•	If you encounter errors or circular dependencies, it may prevent deletion.  ￼ ￼
+	3.	Remove Unmanaged Layers (If Applicable):
+	•	In some cases, agents might have unmanaged customizations layered over the managed solution.
+	•	To remove these:
+	•	Open the solution.
+	•	Select the agent.
+	•	Choose Commands (⋮) > Advanced > See solution layers.
+	•	Identify and remove the unmanaged layer.
+	4.	Delete the Managed Solution:
+	•	After removing dependencies and unmanaged layers, attempt to delete the entire managed solution.
+	•	This action will remove the agent and its components from the environment. ￼
+
+⸻
+
+⚠️ Important Considerations
+	•	Permissions: Ensure you have the necessary administrative rights, such as Power Platform Administrator or System Administrator, in the specific environment.  ￼
+	•	Circular Dependencies: If you encounter issues with dependencies that cannot be removed, it may be necessary to contact Microsoft Support for assistance.  ￼
+	•	Trial Environments: Agents in trial environments are automatically deleted after 30 days, which can be a consideration if immediate deletion isn’t possible.  ￼
+
+⸻
+
+🧪 Alternative Approach: Using Power Automate
+
+If the standard deletion process isn’t feasible, consider using Power Automate to programmatically delete agents:
+	•	Create a Child Flow in Power Automate that targets the specific agent for deletion.
+	•	This method requires appropriate permissions and may involve additional configuration.  ￼
+
+⸻
+
+If you need further assistance or a walkthrough of any of these steps, feel free to ask!
