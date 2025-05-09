@@ -1,40 +1,24 @@
-= Table.AddColumn(PreviousStepName, "ExpandedHits", each 
-    let
-        original = [hits],
-        len = List.Count(original),
-        padded = 
-            if len = 6 then original
-            else if len = 5 then original & {null}
-            else if len = 4 then original & {null, null}
-            else if len = 3 then original & {null, null, null}
-            else if len = 2 then original & {null, null, null, null}
-            else if len = 1 then original & {null, null, null, null, null}
-            else {null, null, null, null, null, null},
-        record = Record.FromList(padded, {"hit1", "hit2", "hit3", "hit4", "hit5", "hit6"})
-    in
-        record
-)
-    // Step 1: Starting from your original table
-    Source = YourPreviousStep, 
-    
-    // Step 2: Add index to preserve original row
-    WithIndex = Table.AddIndexColumn(Source, "RowID", 0, 1, Int64.Type),
+Title: Discussion on [BMCB-310] - Auto-Decommission of Prod Auto Chatbot
 
-    // Step 3: Expand hits list to rows
-    ExpandedHits = Table.ExpandListColumn(WithIndex, "BotResponse.hits"),
+Attendees:
+	•	iChat PE Platform Team: [You], Shishir, Umesh
+	•	Platform Team: Austin
+	•	Additional stakeholders: Production Support Team, Teams Admin Center Team (as needed)
 
-    // Step 4: Add index per original RowID group to mark hit1, hit2, ...
-    Grouped = Table.Group(ExpandedHits, {"RowID"}, {
-        {"AllHits", each Table.AddIndexColumn(_, "HitIndex", 1, 1, Int64.Type)}
-    }),
+Agenda:
+We’re planning the decommissioning of the production Auto Chatbot shortly and would like to align on the following:
+	1.	Overview of the current decommissioning plan
+	2.	Review of attached documentation for disconnecting the agent from Teams (prod) and Microsoft Copilot Studio
+	3.	Discuss options:
+	•	Should the bot be deleted from the managed solution and backed up in GitHub?
+	•	Or retained in the prod environment as an unmanaged solution?
+	4.	Clarify best practices for bot decommissioning processes, applicable to future cases
+	5.	Discuss iChat PE platform-specific considerations:
+	•	Should topics (e.g., billing) be retained or deleted?
+	•	Do we need a Change Request (CR)?
+	6.	Identify high-level steps required for a smooth decommissioning
 
-    // Step 5: Expand grouped table back
-    ExpandedGrouped = Table.ExpandTableColumn(Grouped, "AllHits", {"BotResponse.hits", "RowID", "searchKeyword", "HitIndex"}),
+Attachments:
+	•	Decommissioning Plan Document
 
-    // Step 6: Pivot so that HitIndex values become column names
-    Pivoted = Table.Pivot(ExpandedGrouped, List.Distinct(ExpandedGrouped[HitIndex]), "HitIndex", "BotResponse.hits"),
-
-    // Step 7: Remove duplicate RowID column if needed
-    Final = Table.RemoveColumns(Pivoted, {"RowID"})
-in
-    Final
+Looking forward to aligning on the way forward.
