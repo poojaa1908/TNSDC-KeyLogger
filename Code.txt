@@ -1,24 +1,60 @@
-Title: Discussion on [BMCB-310] - Auto-Decommission of Prod Auto Chatbot
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Spec Comparison Tool</title>
+</head>
+<body>
+    <h2>Upload Old and New API Spec Files</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <label>Old API Spec:</label><br>
+        <input type="file" name="old_file" required><br><br>
 
-Attendees:
-	•	iChat PE Platform Team: [You], Shishir, Umesh
-	•	Platform Team: Austin
-	•	Additional stakeholders: Production Support Team, Teams Admin Center Team (as needed)
+        <label>New API Spec:</label><br>
+        <input type="file" name="new_file" required><br><br>
 
-Agenda:
-We’re planning the decommissioning of the production Auto Chatbot shortly and would like to align on the following:
-	1.	Overview of the current decommissioning plan
-	2.	Review of attached documentation for disconnecting the agent from Teams (prod) and Microsoft Copilot Studio
-	3.	Discuss options:
-	•	Should the bot be deleted from the managed solution and backed up in GitHub?
-	•	Or retained in the prod environment as an unmanaged solution?
-	4.	Clarify best practices for bot decommissioning processes, applicable to future cases
-	5.	Discuss iChat PE platform-specific considerations:
-	•	Should topics (e.g., billing) be retained or deleted?
-	•	Do we need a Change Request (CR)?
-	6.	Identify high-level steps required for a smooth decommissioning
+        <input type="submit" value="Compare and Summarize">
+    </form>
 
-Attachments:
-	•	Decommissioning Plan Document
+    {% if summary_old %}
+        <h3>Summary of OLD API Spec</h3>
+        <pre>{{ summary_old }}</pre>
 
-Looking forward to aligning on the way forward.
+        <h3>Summary of NEW API Spec</h3>
+        <pre>{{ summary_new }}</pre>
+
+        <h3>Comparison Analysis (Markdown Table)</h3>
+        <pre>{{ comparison }}</pre>
+    {% endif %}
+</body>
+</html>
+
+
+
+from tachyon_sdk import TachyonClient
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+client = TachyonClient(api_key=os.getenv("TACHYON_API_KEY"))
+
+def summarize_document(file_path, model_id):
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    prompt = f"Summarize this API specification document:\n\n{content}"
+    response = client.chat(model=model_id, messages=[{"role": "user", "content": prompt}])
+    return response.text
+
+def compare_documents(old_path, new_path, model_id):
+    with open(old_path, 'r') as f:
+        old_content = f.read()
+    with open(new_path, 'r') as f:
+        new_content = f.read()
+
+    prompt = (
+        "Compare the following two API specifications and present the differences in a markdown table with columns: "
+        "Change Type | Description | Old Value | New Value.\n\n"
+        f"Old API Spec:\n{old_content}\n\nNew API Spec:\n{new_content}"
+    )
+    response = client.chat(model=model_id, messages=[{"role": "user", "content": prompt}])
+    return response.text
