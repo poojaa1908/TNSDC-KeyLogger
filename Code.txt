@@ -1,60 +1,70 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>API Spec Comparison Tool</title>
-</head>
-<body>
-    <h2>Upload Old and New API Spec Files</h2>
-    <form method="POST" enctype="multipart/form-data">
-        <label>Old API Spec:</label><br>
-        <input type="file" name="old_file" required><br><br>
+✅ 1. Azure Blob Storage (Recommended for Enterprise Use)
 
-        <label>New API Spec:</label><br>
-        <input type="file" name="new_file" required><br><br>
+Steps:
+	•	Create a Storage Account in Azure.
+	•	Create a container (e.g., bot-assets).
+	•	Upload your images.
+	•	Set the container’s access level to “Blob (anonymous read access)”.
+	•	Each image will now have a public URL like:
+https://<your-storage-account>.blob.core.windows.net/bot-assets/thumbs-up.png
 
-        <input type="submit" value="Compare and Summarize">
-    </form>
+Pros:
+	•	Reliable and scalable.
+	•	Enterprise-grade (good for Copilot and MS stack).
+	•	Can be secured or made public.
 
-    {% if summary_old %}
-        <h3>Summary of OLD API Spec</h3>
-        <pre>{{ summary_old }}</pre>
+Cons:
+	•	Requires Azure access and permissions.
 
-        <h3>Summary of NEW API Spec</h3>
-        <pre>{{ summary_new }}</pre>
+⸻
 
-        <h3>Comparison Analysis (Markdown Table)</h3>
-        <pre>{{ comparison }}</pre>
-    {% endif %}
-</body>
-</html>
+✅ 2. GitHub (For lightweight use / static assets)
 
+Steps:
+	•	Create a public GitHub repository.
+	•	Place all images in a folder (/assets).
+	•	Access images using raw URL:
+https://raw.githubusercontent.com/<user>/<repo>/main/assets/thumbs-up.png
 
+Pros:
+	•	Easy to manage and version.
+	•	Free and widely accessible.
 
-from tachyon_sdk import TachyonClient
-import os
-from dotenv import load_dotenv
-load_dotenv()
+Cons:
+	•	Rate limits apply.
+	•	Not suitable for private/corporate environments without GitHub Enterprise.
 
-client = TachyonClient(api_key=os.getenv("TACHYON_API_KEY"))
+⸻
 
-def summarize_document(file_path, model_id):
-    with open(file_path, 'r') as f:
-        content = f.read()
+✅ 3. SharePoint / OneDrive (Microsoft Ecosystem)
 
-    prompt = f"Summarize this API specification document:\n\n{content}"
-    response = client.chat(model=model_id, messages=[{"role": "user", "content": prompt}])
-    return response.text
+Steps:
+	•	Upload images to a SharePoint Document Library.
+	•	Set sharing settings to “Anyone with the link”.
+	•	Get direct links for each image.
 
-def compare_documents(old_path, new_path, model_id):
-    with open(old_path, 'r') as f:
-        old_content = f.read()
-    with open(new_path, 'r') as f:
-        new_content = f.read()
+Pros:
+	•	Works well in Microsoft environments.
+	•	Simple for small teams.
 
-    prompt = (
-        "Compare the following two API specifications and present the differences in a markdown table with columns: "
-        "Change Type | Description | Old Value | New Value.\n\n"
-        f"Old API Spec:\n{old_content}\n\nNew API Spec:\n{new_content}"
-    )
-    response = client.chat(model=model_id, messages=[{"role": "user", "content": prompt}])
-    return response.text
+Cons:
+	•	Not a true static asset hosting service.
+	•	URLs can expire depending on tenant settings.
+
+⸻
+
+✅ 4. Azure Static Web App or Azure CDN
+
+Steps:
+	•	Set up a static website using Azure Static Web Apps.
+	•	Place your assets in the /images folder.
+	•	Host with a custom domain or default Azure URL:
+https://<your-app>.azurestaticapps.net/images/thumbs-up.png
+
+Pros:
+	•	Clean public URLs.
+	•	Supports folders and web optimization.
+
+Cons:
+	•	Slightly more setup than Blob storage.
+	•	Requires web app hosting knowledge.
