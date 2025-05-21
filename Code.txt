@@ -1,1 +1,2 @@
-QA sign-off for the new reranker_score field integration has been successfully completed. Multiple test queries were executed, and validation was performed by cross-verifying the reranker score in both the Automate Flow output and the Power BI dashboard. The field is reflecting accurately in all test cases. A detailed report with timestamps, test inputs, scores, and supporting screenshots has been compiled and attached. Requesting closure of the ticke
+The guidelines for creating an AD group for GTM Power BI reporting access have been shared with the requester. Additionally, the Confluence page link containing the documented guidelines has been attached for reference.
+Closing this ticket.
