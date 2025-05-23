@@ -1,6 +1,34 @@
-Year = YEAR('YourTable'[Created On])
-Quarter = "Q" & FORMAT('YourTable'[Created On], "Q")
-Month = FORMAT('YourTable'[Created On], "MMMM")  // or MONTH() for number
-Day = DAY('YourTable'[Created On])
-Hour = HOUR('YourTable'[Created On])
-Minute = MINUTE('YourTable'[Created On])
+import os
+import yaml
+
+def load_yaml_content(filepath):
+    with open(filepath, 'r', encoding='utf-8') as file:
+        return file.read()
+
+def build_context_map(old_dir, new_dir):
+    context = {}
+
+    old_files = {
+        f for f in os.listdir(old_dir)
+        if f.endswith('.yml') and os.path.isfile(os.path.join(old_dir, f))
+    }
+
+    new_files = {
+        f for f in os.listdir(new_dir)
+        if f.endswith('.yml') and os.path.isfile(os.path.join(new_dir, f))
+    }
+
+    common_files = old_files.intersection(new_files)
+
+    for filename in common_files:
+        old_path = os.path.join(old_dir, filename)
+        new_path = os.path.join(new_dir, filename)
+
+        try:
+            old_content = load_yaml_content(old_path)
+            new_content = load_yaml_content(new_path)
+            context[old_content] = new_content
+        except Exception as e:
+            context[f"Error reading {filename}"] = str(e)
+
+    return context
