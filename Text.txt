@@ -1,34 +1,62 @@
-import os
-import yaml
+import java.io.*;
+import java.nio.file.*;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-def load_yaml_content(filepath):
-    with open(filepath, 'r', encoding='utf-8') as file:
-        return file.read()
+public class PathFixer {
 
-def build_context_map(old_dir, new_dir):
-    context = {}
+    // Change this to your project's root directory
+    private static final String ROOT_DIR = "/path/to/your/project";
+    
+    // Add all file types where path replacements are needed
+    private static final String[] TARGET_EXTENSIONS = {
+        ".java", ".properties", ".xml", ".json", ".txt"
+    };
 
-    old_files = {
-        f for f in os.listdir(old_dir)
-        if f.endswith('.yml') and os.path.isfile(os.path.join(old_dir, f))
+    public static void main(String[] args) throws IOException {
+        try (Stream<Path> paths = Files.walk(Paths.get(ROOT_DIR))) {
+            List<Path> files = paths
+                    .filter(Files::isRegularFile)
+                    .filter(p -> hasTargetExtension(p.getFileName().toString()))
+                    .collect(Collectors.toList());
+
+            for (Path file : files) {
+                fixFilePaths(file);
+            }
+
+            System.out.println("All matching files processed successfully.");
+        }
     }
 
-    new_files = {
-        f for f in os.listdir(new_dir)
-        if f.endswith('.yml') and os.path.isfile(os.path.join(new_dir, f))
+    private static boolean hasTargetExtension(String fileName) {
+        String lower = fileName.toLowerCase();
+        for (String ext : TARGET_EXTENSIONS) {
+            if (lower.endsWith(ext)) return true;
+        }
+        return false;
     }
 
-    common_files = old_files.intersection(new_files)
+    private static void fixFilePaths(Path filePath) throws IOException {
+        List<String> lines = Files.readAllLines(filePath);
+        boolean changed = false;
 
-    for filename in common_files:
-        old_path = os.path.join(old_dir, filename)
-        new_path = os.path.join(new_dir, filename)
+        for (int i = 0; i < lines.size(); i++) {
+            String original = lines.get(i);
+            
+            // Replace both forward and backward slashes with File.separator
+            String updated = original
+                    .replaceAll("[/\\\\]+", Matcher.quoteReplacement(File.separator));
 
-        try:
-            old_content = load_yaml_content(old_path)
-            new_content = load_yaml_content(new_path)
-            context[old_content] = new_content
-        except Exception as e:
-            context[f"Error reading {filename}"] = str(e)
+            if (!original.equals(updated)) {
+                lines.set(i, updated);
+                changed = true;
+            }
+        }
 
-    return context
+        if (changed) {
+            Files.write(filePath, lines);
+            System.out.println("Updated: " + filePath);
+        }
+    }
+}
