@@ -1,15 +1,16 @@
 import java.io.*;
 import java.nio.file.*;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class PathFixer {
+public class Main {
 
-    // Change this to your project's root directory
+    // Set this to the path of your main project folder
     private static final String ROOT_DIR = "/path/to/your/project";
-    
-    // Add all file types where path replacements are needed
+
+    // List file extensions you want to process
     private static final String[] TARGET_EXTENSIONS = {
         ".java", ".properties", ".xml", ".json", ".txt"
     };
@@ -43,10 +44,7 @@ public class PathFixer {
 
         for (int i = 0; i < lines.size(); i++) {
             String original = lines.get(i);
-            
-            // Replace both forward and backward slashes with File.separator
-            String updated = original
-                    .replaceAll("[/\\\\]+", Matcher.quoteReplacement(File.separator));
+            String updated = original.replaceAll("[/\\\\]+", Matcher.quoteReplacement(File.separator));
 
             if (!original.equals(updated)) {
                 lines.set(i, updated);
