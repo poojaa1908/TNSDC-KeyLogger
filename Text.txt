@@ -1,60 +1,107 @@
-import java.io.*;
-import java.nio.file.*;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+1) How does the scheduling work in Alteryx?
 
-public class Main {
+Scheduling in Alteryx is managed through Alteryx Server or Alteryx Designer with Scheduler (if licensed). Here’s a breakdown:
+	•	Alteryx Designer + Scheduler (for local scheduling):
+You can schedule workflows on your local machine using Windows Task Scheduler via the Designer’s built-in scheduler.
+	•	Alteryx Server (enterprise scheduling):
+	•	Workflows are published to Alteryx Gallery, which is a web-based interface for managing, sharing, and scheduling workflows.
+	•	You can schedule recurring runs (daily, weekly, etc.), specify dependencies, and monitor job statuses.
+	•	Admins can assign permissions, allocate resources, and view schedules for auditing and compliance.
+	•	Alteryx Server supports job queuing and load balancing for scalable scheduling.
 
-    // Set this to the path of your main project folder
-    private static final String ROOT_DIR = "/path/to/your/project";
+✅ Note: Scheduling settings include parameters such as time zones, frequency, notifications on completion or failure, and credentials for database access.
 
-    // List file extensions you want to process
-    private static final String[] TARGET_EXTENSIONS = {
-        ".java", ".properties", ".xml", ".json", ".txt"
-    };
+⸻
 
-    public static void main(String[] args) throws IOException {
-        try (Stream<Path> paths = Files.walk(Paths.get(ROOT_DIR))) {
-            List<Path> files = paths
-                    .filter(Files::isRegularFile)
-                    .filter(p -> hasTargetExtension(p.getFileName().toString()))
-                    .collect(Collectors.toList());
+2) We have multiple prod environments in Prod; do we need different jobs for Alteryx, or can we make it work with variables?
 
-            for (Path file : files) {
-                fixFilePaths(file);
-            }
+You don’t necessarily need separate jobs for each environment if you implement environment-based parameterization using Alteryx constants or workflow/app interface tools.
 
-            System.out.println("All matching files processed successfully.");
-        }
-    }
+Approach:
+	•	Use workflow constants or Alteryx interface tools like Drop Down, Text Box, or File Browse to allow dynamic input of environment-specific parameters (like file paths, DB credentials, API keys).
+	•	Use environment variables or analytic app configuration where users select the environment (Dev, QA, Prod) at runtime.
+	•	Incorporate Alteryx Server Environment Variables or use external config files (YAML/JSON) for connection strings and credentials.
 
-    private static boolean hasTargetExtension(String fileName) {
-        String lower = fileName.toLowerCase();
-        for (String ext : TARGET_EXTENSIONS) {
-            if (lower.endsWith(ext)) return true;
-        }
-        return false;
-    }
+✅ Best Practice: One job with parameterization is easier to manage and reduces code duplication.
 
-    private static void fixFilePaths(Path filePath) throws IOException {
-        List<String> lines = Files.readAllLines(filePath);
-        boolean changed = false;
+⸻
 
-        for (int i = 0; i < lines.size(); i++) {
-            String original = lines.get(i);
-            String updated = original.replaceAll("[/\\\\]+", Matcher.quoteReplacement(File.separator));
+3) Does deploying Alteryx workflows require a change request?
 
-            if (!original.equals(updated)) {
-                lines.set(i, updated);
-                changed = true;
-            }
-        }
+Yes, in enterprise settings, deploying Alteryx workflows (especially to production environments) generally requires a Change Request (CR) or follows a Change Management Process.
+	•	This ensures:
+	•	Auditability
+	•	Compliance with ITIL or internal governance
+	•	Prevention of unauthorized changes
+	•	Impact assessment and rollback plans
 
-        if (changed) {
-            Files.write(filePath, lines);
-            System.out.println("Updated: " + filePath);
-        }
-    }
-}
+✅ Typical Process: Dev → QA/Test → UAT → Prod
+CR is raised during the UAT to Prod promotion.
+
+⸻
+
+4) Does making changes to Alteryx deployed workflows require a change request?
+
+Yes, any change to a deployed workflow (logic change, data source change, parameter change) requires a Change Request if the workflow runs in a production or controlled environment.
+
+This is especially true if the workflow:
+	•	Affects downstream systems
+	•	Processes critical business data
+	•	Is scheduled or shared on the Alteryx Server
+
+✅ Even minor updates often require a CR due to audit/tracking and validation needs.
+
+⸻
+
+5) Does making changes to scheduled jobs require a change request?
+
+Yes, modifying a scheduled job (e.g., altering run frequency, runtime, parameters, or assigned credentials) typically requires a CR in enterprise systems.
+
+Why?
+	•	Scheduling affects processing windows, dependencies, and may create load on DBs or APIs.
+	•	It can impact SLAs, deliverables, and compliance policies.
+
+✅ Suggested Practice: Maintain versioning of schedule changes and document rationale via CR.
+
+⸻
+
+6) If the jobs fail, which support team helps us fix the issue?
+
+This depends on the organization’s support structure, but typically involves:
+	•	Tier 1 or L1 Support (Operations or Monitoring Team):
+	•	Monitors workflow status
+	•	Logs basic errors or alerts
+	•	Notifies stakeholders
+	•	Tier 2 or L2 Support (Alteryx Administrators / Data Engineers):
+	•	Access to Alteryx Gallery or Designer logs
+	•	Able to re-run or debug workflows
+	•	Responsible for fixing credential issues, data source connectivity, etc.
+	•	Tier 3 (Development Team or Data Analytics Team):
+	•	Fixes logic or data-level issues within workflows
+	•	Handles script-based errors or Python/R tool failures
+	•	May work closely with source system admins or DBAs
+
+✅ Tip: The Alteryx Service logs, Gallery logs, and workflow result logs are key for debugging.
+
+⸻
+
+7) What’s the process to get license and Alteryx installed on our systems?
+
+Installation & Licensing Process:
+	1.	Request Initiation:
+	•	End user or team raises a request via the internal IT ticketing system (like ServiceNow or Jira).
+	•	Approval may be needed from the manager or project owner.
+	2.	License Procurement:
+	•	IT or Procurement coordinates with Alteryx sales or license admin to issue Designer/Server licenses.
+	•	License keys are tied to the user email or machine.
+	3.	Installation:
+	•	IT team downloads the installer (from Alteryx’s official site).
+	•	Installation is performed with admin rights (if restricted environment).
+	•	The user enters the license key or connects to the license server (if using enterprise floating license).
+	4.	Activation:
+	•	Either automatic (online) or offline activation using license file.
+	5.	Validation & Testing:
+	•	Ensure connectivity to databases, filesystems, or Alteryx Server.
+	•	Test basic workflow creation and execution.
+
+✅ Admins also handle license reassignment, renewals, and usage tracking via Alteryx License Manager or system inventory tools.
