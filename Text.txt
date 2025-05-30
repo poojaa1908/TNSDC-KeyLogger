@@ -1,3 +1,12 @@
-Performed initial assessment and research for the auto bot decommission process. Attached the Confluence page documented by the platform team post our discussion, outlining the agreed decommission steps. Also attached a PDF detailing the specific steps to be followed during the decommission, along with the automation sponsor mail template received from the ASM team for reference.
-
-
+let
+    Source = CommonDataService.Database("orga5863add.crm.dynamics.com"),
+    BotConversations = Value.NativeQuery(
+        Source,
+        "SELECT 
+            con.bot_conversationtranscriptid AS [BotName], 
+            con.conversationtranscriptid AS [ConversationID], 
+            con.conversationstarttime AS [CreatedOn]
+        FROM conversationtranscript AS con"
+    )
+in
+    BotConversations
