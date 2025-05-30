@@ -1,12 +1,15 @@
 SELECT 
-    con.bot_conversationtranscriptid AS [BotName],
+    con.bot_conversationtranscriptidname AS [BotName],
     con.conversationtranscriptid AS [ConversationID],
     con.createdon AS [CreatedOn],
-    JSON_VALUE(activity.value, '$.type') AS [ValueType],
-    JSON_VALUE(activity.value, '$.value') AS [Value]
+    con.Content,
+    t.valueType,
+    t.value
 FROM 
-    conversationtranscript AS con
-CROSS APPLY OPENJSON(con.content, '$.activities') AS activity
-WITH (
-    value NVARCHAR(MAX) AS JSON
-)
+    conversationtranscript con
+CROSS APPLY 
+    OPENJSON(con.Content, '$.activities')
+    WITH (
+        valueType VARCHAR(200) '$.value.type',
+        value NVARCHAR(MAX) '$.value' AS JSON
+    ) AS t
