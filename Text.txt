@@ -2,9 +2,9 @@ SELECT
     con.bot_conversationtranscriptidname AS [BotName],
     con.conversationtranscriptid AS [ConversationID],
     con.createdon AS [CreatedOn],
-    con.Content,
     t.valueType,
-    t.value
+    var.name,
+    var.newValue
 FROM 
     conversationtranscript con
 CROSS APPLY 
@@ -13,3 +13,13 @@ CROSS APPLY
         valueType VARCHAR(200) '$.value.type',
         value NVARCHAR(MAX) '$.value' AS JSON
     ) AS t
+CROSS APPLY 
+    OPENJSON(t.value)
+    WITH (
+        name NVARCHAR(200) '$.name',
+        newValue NVARCHAR(MAX) '$.newValue'
+    ) AS var
+WHERE 
+    con.createdon >= DATEADD(HOUR, -24, GETUTCDATE())
+    AND t.valueType = 'VariableAssignment'
+    AND (var.name LIKE '%Error%' OR var.name LIKE '%error%')
