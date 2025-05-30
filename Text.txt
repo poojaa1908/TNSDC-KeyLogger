@@ -1,28 +1,12 @@
-let
-    Source = CommonDataService.Database("orga5863add.crm.dynamics.com"),
-    RawTable = Value.NativeQuery(
-        Source,
-        "SELECT 
-            con.conversationtranscriptid AS [ConversationID],
-            con.conversationstarttime AS [CreatedOn],
-            con.bot_conversationtranscriptid AS [BotName],
-            con.Content
-         FROM conversationtranscript AS con"
-    ),
-
-    // Parse the JSON from Content column
-    WithParsedJSON = Table.AddColumn(RawTable, "ParsedContent", each Json.Document([Content])),
-
-    // Expand the 'activities' list from the parsed JSON
-    WithActivities = Table.ExpandListColumn(WithParsedJSON, "ParsedContent.activities"),
-
-    // Expand the activity JSON object to get 'value.type' and 'value'
-    WithActivityDetails = Table.ExpandRecordColumn(WithActivities, "ParsedContent.activities", {"value"}, {"value"}),
-
-    // Expand value to get 'type' and the actual 'value'
-    FinalExpanded = Table.ExpandRecordColumn(WithActivityDetails, "value", {"type", "value"}, {"ValueType", "Value"}),
-
-    // Select required columns only
-    FinalTable = Table.SelectColumns(FinalExpanded, {"ConversationID", "CreatedOn", "BotName", "ValueType", "Value"})
-in
-    FinalTable
+SELECT 
+    con.bot_conversationtranscriptid AS [BotName],
+    con.conversationtranscriptid AS [ConversationID],
+    con.createdon AS [CreatedOn],
+    JSON_VALUE(activity.value, '$.type') AS [ValueType],
+    JSON_VALUE(activity.value, '$.value') AS [Value]
+FROM 
+    conversationtranscript AS con
+CROSS APPLY OPENJSON(con.content, '$.activities') AS activity
+WITH (
+    value NVARCHAR(MAX) AS JSON
+)
