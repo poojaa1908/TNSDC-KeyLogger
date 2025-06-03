@@ -1,25 +1,18 @@
-SELECT 
-    con.bot_conversationtranscriptidname AS [BotName],
-    con.conversationtranscriptid AS [ConversationID],
-    con.createdon AS [CreatedOn],
-    t.valueType,
-    var.name,
-    var.newValue
-FROM 
-    conversationtranscript con
-CROSS APPLY 
-    OPENJSON(con.Content, '$.activities')
-    WITH (
-        valueType VARCHAR(200) '$.value.type',
-        value NVARCHAR(MAX) '$.value' AS JSON
-    ) AS t
-CROSS APPLY 
-    OPENJSON(t.value)
-    WITH (
-        name NVARCHAR(200) '$.name',
-        newValue NVARCHAR(MAX) '$.newValue'
-    ) AS var
-WHERE 
-    con.createdon >= DATEADD(HOUR, -24, GETUTCDATE())
-    AND t.valueType = 'VariableAssignment'
-    AND (var.name LIKE '%Error%' OR var.name LIKE '%error%')
+Ticket 1: Obtain Automation Sponsor Approval & Submit Wim Ticket for Bot Decommission
+
+Description:
+Initiate decommissioning of the chatbot by securing business approval from the Automation Sponsor. Engage the Automation Success Management (ASM) team via Jira, using their approval template. Collaborate with the Onyx Product Owner to get business sign-off. Submit the Wim ticket to the ASM team using the provided link.
+
+⸻
+
+Ticket 2: Raise Change Request for Chatbot Decommissioning with IA - COE - Platform Support
+
+Description:
+Create a change request to disconnect the chatbot from the Power Platform channel, turn off all related cloud flows, and revoke security roles from the service accounts. Additionally, raise a Ctask to the Teams Admin Group to remove the app from Microsoft Teams and notify users about the decommission. Ensure all service accounts are removed from the associated environment access AD group.
+
+⸻
+
+Ticket 3: Document Decommissioning Process for Confluence
+
+Description:
+As this is the first chatbot to be decommissioned, thoroughly document each step taken during the process. After internal verification, publish the finalized steps to the designated Confluence page for future reference and reuse.
