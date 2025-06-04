@@ -1,18 +1,15 @@
-Ticket 1: Obtain Automation Sponsor Approval & Submit Wim Ticket for Bot Decommission
-
-Description:
-Initiate decommissioning of the chatbot by securing business approval from the Automation Sponsor. Engage the Automation Success Management (ASM) team via Jira, using their approval template. Collaborate with the Onyx Product Owner to get business sign-off. Submit the Wim ticket to the ASM team using the provided link.
-
-⸻
-
-Ticket 2: Raise Change Request for Chatbot Decommissioning with IA - COE - Platform Support
-
-Description:
-Create a change request to disconnect the chatbot from the Power Platform channel, turn off all related cloud flows, and revoke security roles from the service accounts. Additionally, raise a Ctask to the Teams Admin Group to remove the app from Microsoft Teams and notify users about the decommission. Ensure all service accounts are removed from the associated environment access AD group.
-
-⸻
-
-Ticket 3: Document Decommissioning Process for Confluence
-
-Description:
-As this is the first chatbot to be decommissioned, thoroughly document each step taken during the process. After internal verification, publish the finalized steps to the designated Confluence page for future reference and reuse.
+CutoffTime =
+VAR SelectedValue = SELECTEDVALUE(TimeValue[TimeValue])
+VAR SelectedUnit = SELECTEDVALUE(TimeGranularity[Unit])
+VAR NowTime = NOW()
+RETURN
+    SWITCH(
+        SelectedUnit,
+        "Minutes", NOW() - (SelectedValue / 1440.0),
+        "Hours",   NOW() - (SelectedValue / 24.0),
+        "Days",    NOW() - SelectedValue,
+        "Weeks",   NOW() - (SelectedValue * 7),
+        "Months",  EDATE(NOW(), -SelectedValue),
+        "Years",   EDATE(NOW(), -12 * SelectedValue),
+        NOW()
+    )
