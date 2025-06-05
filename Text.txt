@@ -1,15 +1,9 @@
-CutoffTime =
-VAR SelectedValue = SELECTEDVALUE(TimeValue[TimeValue])
-VAR SelectedUnit = SELECTEDVALUE(TimeGranularity[Unit])
-VAR NowTime = NOW()
-RETURN
-    SWITCH(
-        SelectedUnit,
-        "Minutes", NOW() - (SelectedValue / 1440.0),
-        "Hours",   NOW() - (SelectedValue / 24.0),
-        "Days",    NOW() - SelectedValue,
-        "Weeks",   NOW() - (SelectedValue * 7),
-        "Months",  EDATE(NOW(), -SelectedValue),
-        "Years",   EDATE(NOW(), -12 * SelectedValue),
-        NOW()
-    )
+SELECT 
+    con.bot_conversationtranscriptid AS BotName,
+    CAST(con.createdon AS DATE) AS CreatedDate,
+    COUNT(con.conversationtranscriptid) AS ConversationCount
+FROM 
+    conversationtranscript AS con
+GROUP BY 
+    con.bot_conversationtranscriptid,
+    CAST(con.createdon AS DATE)
