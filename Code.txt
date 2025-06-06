@@ -1,2 +1,17 @@
-The guidelines for creating an AD group for GTM Power BI reporting access have been shared with the requester. Additionally, the Confluence page link containing the documented guidelines has been attached for reference.
-Closing this ticket.
+How is Alteryx License Being Charged?
+
+🔹 Cost and Chargeback Model
+	•	No upfront charges to AUs (Analytics Units) currently.
+	•	Model may change in the future.
+
+🔹 Current Cost Basis
+	•	Based on total cost of Data Analytics Capabilities L3 Product (includes SAS, BI tools, data services, Tech and COO costs).
+	•	Percentage allocation based on data consumption across revenue-generating LOBs (Lines of Business).
+
+🔹 Future Chargeback Plan
+	•	Charges to reflect actual tool utilization (fixed + variable rates).
+	•	Charges handled by DMI; final AU-level charges may vary by LOB.
+
+🔹 Status
+	•	Model is still being defined.
+	•	FAQs and communication will be updated once finalized.
