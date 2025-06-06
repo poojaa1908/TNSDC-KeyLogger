@@ -1,17 +1,25 @@
-How is Alteryx License Being Charged?
+import streamlit as st
 
-🔹 Cost and Chargeback Model
-	•	No upfront charges to AUs (Analytics Units) currently.
-	•	Model may change in the future.
+# Hide Deploy button, "About", and "Record a screencast" using custom CSS
+hide_streamlit_style = """
+    <style>
+        /* Hide deploy button */
+        .stDeployButton {
+            display: none;
+        }
 
-🔹 Current Cost Basis
-	•	Based on total cost of Data Analytics Capabilities L3 Product (includes SAS, BI tools, data services, Tech and COO costs).
-	•	Percentage allocation based on data consumption across revenue-generating LOBs (Lines of Business).
+        /* Hide menu items */
+        [data-testid="stActionMenu"] ul {
+            display: none !important;
+        }
 
-🔹 Future Chargeback Plan
-	•	Charges to reflect actual tool utilization (fixed + variable rates).
-	•	Charges handled by DMI; final AU-level charges may vary by LOB.
+        /* Alternatively, hide individual options (fallback method) */
+        button[title="Record a screencast"],
+        button[title="About"],
+        button[title="Deploy this app"] {
+            display: none !important;
+        }
+    </style>
+"""
 
-🔹 Status
-	•	Model is still being defined.
-	•	FAQs and communication will be updated once finalized.
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
