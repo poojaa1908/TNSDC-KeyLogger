@@ -1,43 +1,13 @@
-Slide Title: Implementation Plan – Dataverse Data Archival to On-Prem using Alteryx
-
-⸻
-
-1. Setup and Access Configuration
-	•	Request a ServiceNow change request to allow a single SPN to access all 5 production environments.
-	•	Justify the change: reduced complexity, centralized authentication, easier monitoring.
-
-⸻
-
-2. Data Extraction via Alteryx
-	•	Use Alteryx input nodes to connect to all 5 Dataverse environments via the common SPN.
-	•	Design Alteryx to fetch initial full-load data from each environment.
-	•	Load this data into an Oracle DB (using different tables for each environment).
-	•	Optionally, store data as Excel files for backups or snapshots.
-
-⸻
-
-3. Weekly Batch Job – Incremental Loading
-	•	Use Alteryx scheduler or external cron job to trigger on Sundays.
-	•	Extract only last 7 days of data.
-	•	Append to respective Oracle DB tables.
-
-⸻
-
-4. Weekly Data Purging Job in Dataverse
-	•	After extraction is confirmed, run a purging job.
-	•	Ensure only last 30 days of data is retained in Dataverse.
-	•	Delete earliest 7 days as new 7 days are added.
-
-⸻
-
-5. Parallel vs. Serial Execution
-	•	✅ Parallel execution is feasible and optimal:
-	•	Each input node connects to a different environment.
-	•	Load data into different tables concurrently in Oracle DB.
-	•	Alteryx supports multiple input/output streams in the same workflow.
-
-⸻
-
-6. Monitoring and Logging
-	•	Log every batch run: number of rows extracted, timestamp, source environment.
-	•	Add error handling in Alteryx for retries or alerts on failure.
+FilteredBots =
+VALUES (
+    FILTER (
+        errors,
+        // Custom logic to filter based on selected granularity and number
+        errors[TimeColumn] >= TODAY() - SWITCH(
+            SELECTEDVALUE(TimeGranularity[Granularity]),
+            "Hours", SELECTEDVALUE(TimeRange[TimeRange]) / 24,
+            "Days", SELECTEDVALUE(TimeRange[TimeRange]),
+            "Weeks", SELECTEDVALUE(TimeRange[TimeRange]) * 7
+        )
+    )[bot_name]
+)
