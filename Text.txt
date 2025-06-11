@@ -1,13 +1,96 @@
-FilteredBots =
-VALUES (
-    FILTER (
-        errors,
-        // Custom logic to filter based on selected granularity and number
-        errors[TimeColumn] >= TODAY() - SWITCH(
-            SELECTEDVALUE(TimeGranularity[Granularity]),
-            "Hours", SELECTEDVALUE(TimeRange[TimeRange]) / 24,
-            "Days", SELECTEDVALUE(TimeRange[TimeRange]),
-            "Weeks", SELECTEDVALUE(TimeRange[TimeRange]) * 7
-        )
-    )[bot_name]
-)
+Here’s the updated report with the third concern included, maintaining the same clear and professional format as before:
+
+⸻
+
+Ticket BCC 987955 – Invalid Data and Report: Key Findings
+
+⸻
+
+Concern 1: Presence of Single-Word Prompts in the GPL-VA Report
+
+Observation:
+The report displays several single-word prompts, even though the UI enforces a minimum of 4 words for prompt submissions.
+
+Root Cause:
+These single-word prompts are not directly entered by users. Instead, they are generated when users interact with adaptive cards (e.g., selecting options like “Yes” or “No”) during the conversation flow. While the UI restricts short manual prompts, button interactions are still logged as search keywords, leading to their appearance in the report.
+
+Resolution Strategy:
+A filter will be added to exclude prompts with fewer than 4 words at the extraction layer. This ensures alignment between actual user input and reported data.
+
+⸻
+
+Concern 2: Inconsistency Between Feedback Responses and Continued Bot Interaction
+
+Observation:
+In some instances, users appear to have selected “Yes” to the question “Did that answer your question?”, but additional bot responses and user ratings follow.
+
+Root Cause:
+This is due to a multi-stage feedback loop in the bot’s design. When a user repeatedly selects “No”, the bot (prior to the fourth response) asks whether the user wants to expand the scope (e.g., explore service-related options). If the user selects “Yes”, a new response is provided—but the “Yes” here is not linked to feedback satisfaction; it’s related to scope expansion. The subsequent response may then be rated, which causes confusion in interpreting the flow.
+
+Clarification:
+The system currently does not differentiate between “Yes” responses to feedback and those related to scope expansion. This limitation needs to be addressed at the build/development level for more accurate feedback tracking.
+
+Supporting Evidence:
+A screenshot is attached to illustrate the multi-turn conversation and where context changes occur.
+
+⸻
+
+Concern 3: Perceived Data Loss in Feedback Report vs. Adoption Report
+
+Observation:
+A user named DebEvrin reportedly accessed the report multiple times. However, only two entries corresponding to this user appear in the feedback report (Page 2 of the Power BI dashboard), leading to concerns about missing data.
+
+Root Cause:
+There is a distinction between the Feedback Report and Adoption Report (Page 5). The Feedback Report captures individual feedback entries related to specific bot messages or responses (e.g., “Did that answer your question?”). In contrast, the Adoption Report tracks session-level metrics—including total session counts and average session duration.
+
+Clarification:
+In DebEvrin’s case, while multiple sessions and interactions are correctly captured in the Adoption Report, only two interactions involved explicit feedback and are thus shown in the Feedback Report. This is expected behavior and not indicative of data loss.
+
+⸻
+
+Let me know if you’d like to add graphs/screenshots for each concern or if you’d like the content formatted for PowerPoint, Word, or email.
+
+
+Certainly! Here’s your updated resolution strategy for Concern 1 (for the report), and separately, I’ve provided a Power BI implementation step document (not to be included in the main report).
+
+⸻
+
+✅ Updated Resolution Strategy (for Concern 1 – For the Report)
+
+Resolution Strategy:
+In the Power BI report, we will add a transformation in the Applied Steps to filter out any interactions where the search keyword contains fewer than 4 words. This is achieved using the “Filter Rows” option in Power BI Query Editor. The change ensures the report aligns with UI constraints and improves data quality. Sample implementation screenshots will be attached for reference.
+
+⸻
+
+📄 Separate Document – Power BI Filtering: Search Keywords < 4 Words
+
+Goal:
+Filter out any rows in Power BI where the search keyword contains less than 4 words.
+
+⸻
+
+Steps to Implement in Power BI (Power Query Editor):
+	1.	Open Power Query Editor:
+In Power BI Desktop, go to Home > Transform Data.
+	2.	Select Your Table:
+Identify and select the table containing the search_keyword (or equivalent) column.
+	3.	Add a Custom Column to Count Words:
+Go to Add Column > Custom Column
+Use the following formula to count the number of words:
+
+List.Count(Text.Split(Text.Trim([search_keyword]), " "))
+
+Name this column as: WordCount
+
+	4.	Filter Rows with Word Count < 4:
+	•	Click the dropdown on the WordCount column.
+	•	Choose Number Filters > Greater Than or Equal To
+	•	Set the value to 4
+	5.	(Optional) Remove the WordCount Column:
+If you don’t need the column in the final report, right-click on it and choose Remove.
+	6.	Apply & Close:
+Click Close & Apply in the Power Query Editor.
+
+⸻
+
+Let me know if you’d like the same provided in a downloadable .docx or .pdf format with screenshots, or if you’d like the M-code version directly too.
