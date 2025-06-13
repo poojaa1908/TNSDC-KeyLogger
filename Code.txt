@@ -1,66 +1,56 @@
-SELECT
-    con.content,
-    con.bot_conversationtranscriptidname AS 'BotName',
-    con.conversationtranscriptid AS 'ConversationID',
-    con.conversationstarttime AS 'ConversationStartTime',
-    t1.employee_Fname AS 'Employee_FirstName',
-    t1.employee_LName AS 'Employee_LastName',
-    t1.employee_Email AS 'Employee_Email',
-    t1.employee_JobTitle AS 'Employee_JobTitle',
-    t1.employee_ID AS 'Employee_ID',
-    t1.employee_AU AS 'Employee_AU',
-    CASE
-        WHEN t.fromRole = 0 THEN 'Bot'
-        ELSE 'User'
-    END AS 'Message_From',
-    ISNULL(text, 'adaptive card message') AS 'Text',
-    -- New CSAT Rating Column
-    csat.Rating AS 'CSAT_Rating'
+Here’s a structured Analysis Document summarizing your character limit test on TeamChat using Copilot Studio, with proper sections and concise explanation for review or reference:
 
-FROM conversationtranscript AS con
+⸻
 
--- VariableAssignment data extraction
-CROSS APPLY OPENJSON(con.Content, '$.activities') WITH (
-    ValueType VARCHAR(200) '$.value.type',
-    newValue NVARCHAR(MAX) '$.value.newValue',
-    variableName NVARCHAR(MAX) '$.value.name'
-) AS a
+Analysis Document: Character Limit Testing in TeamChat via Copilot Studio Bot
 
--- Extract user details from newValue
-CROSS APPLY OPENJSON(a.newValue) WITH (
-    employee_Fname VARCHAR(200) '$.employee_Fname',
-    employee_LName VARCHAR(200) '$.employee_LName',
-    employee_Email VARCHAR(200) '$.employee_Email',
-    employee_JobTitle VARCHAR(200) '$.employee_JobTitle',
-    employee_ID VARCHAR(200) '$.employee_ID',
-    employee_AU VARCHAR(200) '$.employee_AU'
-) AS t1
+Objective
 
--- Extract message details
-CROSS APPLY OPENJSON(con.Content, '$.activities') WITH (
-    text VARCHAR(200) '$.text',
-    timestamp VARCHAR(200) '$.timestamp',
-    type VARCHAR(200) '$.type',
-    fromRole VARCHAR(200) '$.from.role'
-) AS t
+To identify and validate the maximum character payload that TeamChat can handle when triggered through a Copilot Studio bot deployed in a Teams channel.
 
--- Extract CSAT Rating
-OUTER APPLY (
-    SELECT TOP 1
-        csatData.rating AS Rating
-    FROM OPENJSON(con.Content, '$.activities') WITH (
-        ValueType VARCHAR(200) '$.value.type',
-        rating INT '$.value.rating'
-    ) AS csatData
-    WHERE csatData.ValueType = 'CSATSurveyResponse'
-) AS csat
+⸻
 
-WHERE 
-    a.ValueType = 'VariableAssignment'
-    AND a.variableName = 'IChat_UserDetail'
-    AND t.type = 'message'
-    AND con.bot_conversationtranscriptidname = 'CASEY Search'
-    AND con.conversationstarttime > CAST(GETDATE() - 200 AS DATE)
+Setup Overview
 
-ORDER BY
-    con.conversationstarttime DESC
+A chatbot was developed in Copilot Studio, and two topics were created with different payload sizes. The bot was deployed into a Microsoft Teams channel for testing.
+
+Topics & Triggers:
+
+Trigger Word	Payload Size (Characters)	Outcome
+ACCEPT	40,767	✅ Successfully displayed in Teams
+REJECT	41,257	❌ Error displayed: “Message size is very long”
+
+
+⸻
+
+Testing and Observation
+	•	When the ACCEPT keyword was triggered, a payload containing 40,767 characters was displayed successfully in the TeamChat interface.
+	•	When the REJECT keyword was triggered, a payload containing 41,257 characters caused Teams to return an error message indicating the message is too large to display.
+
+Screenshots of both outcomes have been captured and attached for evidence.
+
+⸻
+
+Inference
+
+Based on the observations, the maximum payload that TeamChat accepts without error lies between 40,767 and 41,257 characters.
+
+To ensure stability and future-proofing, a 10% buffer was subtracted from the successful payload size to define a safe maximum character limit.
+
+Calculation:
+
+10% of 40,767 = 4,076.7
+Safe Limit = 40,767 - 4,076.7 ≈ 36,690.3
+Rounded Safe Limit = 37,000 characters
+
+
+⸻
+
+Conclusion
+	•	✅ The TeamChat platform supports payloads up to 40,767 characters based on current testing.
+	•	❌ Payloads exceeding 41,257 characters result in errors.
+	•	🎯 A conservative character limit of 37,000 characters is recommended for production use to avoid runtime errors and provide a buffer for any backend or platform changes.
+
+⸻
+
+Let me know if you’d like this formatted as a downloadable PDF or Word document.
