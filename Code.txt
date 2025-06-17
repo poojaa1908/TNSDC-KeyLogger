@@ -1,56 +1,11 @@
-Here’s a structured Analysis Document summarizing your character limit test on TeamChat using Copilot Studio, with proper sections and concise explanation for review or reference:
+✅ Handled Errors
+	•	These are intentionally captured by the developer within custom topics.
+	•	Handled using custom error-handling logic defined in the bot’s flow.
+	•	Error details are stored using custom variables (developer-defined).
+	•	Example: If a particular step fails in a custom topic, it’s captured and logged using predefined logic.
 
-⸻
-
-Analysis Document: Character Limit Testing in TeamChat via Copilot Studio Bot
-
-Objective
-
-To identify and validate the maximum character payload that TeamChat can handle when triggered through a Copilot Studio bot deployed in a Teams channel.
-
-⸻
-
-Setup Overview
-
-A chatbot was developed in Copilot Studio, and two topics were created with different payload sizes. The bot was deployed into a Microsoft Teams channel for testing.
-
-Topics & Triggers:
-
-Trigger Word	Payload Size (Characters)	Outcome
-ACCEPT	40,767	✅ Successfully displayed in Teams
-REJECT	41,257	❌ Error displayed: “Message size is very long”
-
-
-⸻
-
-Testing and Observation
-	•	When the ACCEPT keyword was triggered, a payload containing 40,767 characters was displayed successfully in the TeamChat interface.
-	•	When the REJECT keyword was triggered, a payload containing 41,257 characters caused Teams to return an error message indicating the message is too large to display.
-
-Screenshots of both outcomes have been captured and attached for evidence.
-
-⸻
-
-Inference
-
-Based on the observations, the maximum payload that TeamChat accepts without error lies between 40,767 and 41,257 characters.
-
-To ensure stability and future-proofing, a 10% buffer was subtracted from the successful payload size to define a safe maximum character limit.
-
-Calculation:
-
-10% of 40,767 = 4,076.7
-Safe Limit = 40,767 - 4,076.7 ≈ 36,690.3
-Rounded Safe Limit = 37,000 characters
-
-
-⸻
-
-Conclusion
-	•	✅ The TeamChat platform supports payloads up to 40,767 characters based on current testing.
-	•	❌ Payloads exceeding 41,257 characters result in errors.
-	•	🎯 A conservative character limit of 37,000 characters is recommended for production use to avoid runtime errors and provide a buffer for any backend or platform changes.
-
-⸻
-
-Let me know if you’d like this formatted as a downloadable PDF or Word document.
+⚠️ Unhandled Errors
+	•	These are not explicitly handled in the bot’s flow and are captured by the system topic called OnError.
+	•	Triggered when no matching topic is found or an unexpected issue occurs.
+	•	The error is logged under a common variable called ErrorTraceData.
+	•	Reflects missing or incomplete handling logic in the bot’s design.
