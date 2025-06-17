@@ -1,11 +1,77 @@
-✅ Handled Errors
-	•	These are intentionally captured by the developer within custom topics.
-	•	Handled using custom error-handling logic defined in the bot’s flow.
-	•	Error details are stored using custom variables (developer-defined).
-	•	Example: If a particular step fails in a custom topic, it’s captured and logged using predefined logic.
+SELECT
+    con.content,
+    con.bot_conversationtranscriptidname AS 'BotName',
+    con.conversationtranscriptid AS 'ConversationID',
+    con.conversationstarttime AS 'ConversationStartTime',
+    t1.employee_Fname AS 'Employee_FirstName',
+    t1.employee_LName AS 'Employee_LastName',
+    t1.employee_Email AS 'Employee_Email',
+    t1.employee_JobTitle AS 'Employee_JobTitle',
+    t1.employee_ID AS 'Employee_ID',
+    t1.employee_AU AS 'Employee_AU',
+    CASE
+        WHEN t.fromRole = 0 THEN 'Bot'
+        ELSE 'User'
+    END AS 'Message_From',
+    ISNULL(t.text, 'adaptive card message') AS 'Text',
 
-⚠️ Unhandled Errors
-	•	These are not explicitly handled in the bot’s flow and are captured by the system topic called OnError.
-	•	Triggered when no matching topic is found or an unexpected issue occurs.
-	•	The error is logged under a common variable called ErrorTraceData.
-	•	Reflects missing or incomplete handling logic in the bot’s design.
+    -- CSAT Rating and Comment
+    csat.Rating AS 'CSAT_Rating',
+    t_feedback.userFeedback AS 'CSAT_Comment'
+
+FROM conversationtranscript AS con
+
+-- VariableAssignment data extraction
+CROSS APPLY OPENJSON(con.Content, '$.activities') WITH (
+    ValueType VARCHAR(200) '$.value.type',
+    newValue NVARCHAR(MAX) '$.value.newValue',
+    variableName NVARCHAR(MAX) '$.value.name'
+) AS a
+
+-- Extract user details from newValue
+CROSS APPLY OPENJSON(a.newValue) WITH (
+    employee_Fname VARCHAR(200) '$.employee_Fname',
+    employee_LName VARCHAR(200) '$.employee_LName',
+    employee_Email VARCHAR(200) '$.employee_Email',
+    employee_JobTitle VARCHAR(200) '$.employee_JobTitle',
+    employee_ID VARCHAR(200) '$.employee_ID',
+    employee_AU VARCHAR(200) '$.employee_AU'
+) AS t1
+
+-- Extract message + metadata
+CROSS APPLY OPENJSON(con.Content, '$.activities') WITH (
+    text VARCHAR(200) '$.text',
+    timestamp VARCHAR(200) '$.timestamp',
+    type VARCHAR(200) '$.type',
+    fromRole VARCHAR(200) '$.from.role',
+    value NVARCHAR(MAX) '$.value'
+) AS t
+
+-- Extract user feedback from 'value' object
+OUTER APPLY OPENJSON(t.value) WITH (
+    userFeedback NVARCHAR(MAX) '$.userFeedback'
+) AS t_feedback
+
+-- Optionally extract rating (if you want to retain)
+OUTER APPLY (
+    SELECT TOP 1
+        csatData.rating AS Rating
+    FROM OPENJSON(con.Content, '$.activities') WITH (
+        ValueType VARCHAR(200) '$.value.type',
+        value NVARCHAR(MAX) '$.value'
+    ) AS raw
+    OUTER APPLY OPENJSON(raw.value) WITH (
+        rating INT '$.rating'
+    ) AS csatData
+    WHERE raw.ValueType = 'CSATSurveyResponse'
+) AS csat
+
+WHERE 
+    a.ValueType = 'VariableAssignment'
+    AND a.variableName = 'IChat_UserDetail'
+    AND t.type = 'message'
+    AND con.bot_conversationtranscriptidname = 'CASEY Search'
+    AND con.conversationstarttime > CAST(GETDATE() - 200 AS DATE)
+
+ORDER BY
+    con.conversationstarttime DESC
