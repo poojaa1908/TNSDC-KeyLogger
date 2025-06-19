@@ -1,55 +1,6 @@
-SELECT
-    con.content,
-    con.bot_conversationtranscriptidname AS 'BotName',
-    con.conversationtranscriptid AS 'ConversationID',
-    con.conversationstarttime AS 'ConversationStartTime',
-
-    emp.employee_Fname AS 'Employee_FirstName',
-    emp.employee_LName AS 'Employee_LastName',
-    emp.employee_Email AS 'Employee_Email',
-    emp.employee_JobTitle AS 'Employee_JobTitle',
-    emp.employee_ID AS 'Employee_ID',
-    emp.employee_AU AS 'Employee_AU',
-
-    CASE
-        WHEN act.fromRole = '0' THEN 'Bot'
-        ELSE 'User'
-    END AS 'Message_From',
-
-    ISNULL(act.text, 'adaptive card message') AS 'Text',
-    csat.rating AS 'CSAT_Rating',
-    csat.userFeedback AS 'CSAT_Comment'
-
-FROM conversationtranscript AS con
-
--- Parse activities once
-CROSS APPLY OPENJSON(con.Content, '$.activities') WITH (
-    type VARCHAR(200) '$.type',
-    text NVARCHAR(MAX) '$.text',
-    timestamp VARCHAR(200) '$.timestamp',
-    fromRole VARCHAR(10) '$.from.role',
-    value NVARCHAR(MAX) '$.value'
-) AS act
-
--- Extract employee details from activity.value (if available)
-OUTER APPLY OPENJSON(act.value) WITH (
-    employee_Fname VARCHAR(200) '$.employee_Fname',
-    employee_LName VARCHAR(200) '$.employee_LName',
-    employee_Email VARCHAR(200) '$.employee_Email',
-    employee_JobTitle VARCHAR(200) '$.employee_JobTitle',
-    employee_ID VARCHAR(200) '$.employee_ID',
-    employee_AU VARCHAR(200) '$.employee_AU'
-) AS emp
-
--- Extract CSAT rating and comment (if available)
-OUTER APPLY OPENJSON(act.value) WITH (
-    rating INT '$.rating',
-    userFeedback NVARCHAR(MAX) '$.userFeedback'
-) AS csat
-
-WHERE
-    con.bot_conversationtranscriptidname = 'CASEY Search'
-    AND CAST(con.conversationstarttime AS DATE) BETWEEN '2025-06-02' AND '2025-06-03'
-
-ORDER BY
-    con.conversationstarttime DESC
+= 
+let lowerText = Text.Lower([text]) in
+    if Text.Contains(lowerText, "osds") or Text.Contains(lowerText, "open source data science") then "OSDS"
+    else if Text.Contains(lowerText, "aa lab") then "AA Lab"
+    else if Text.Contains(lowerText, "data robot") then "Data Robot"
+    else "Other"
