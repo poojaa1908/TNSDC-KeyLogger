@@ -1,6 +1,261 @@
-= 
-let lowerText = Text.Lower([text]) in
-    if Text.Contains(lowerText, "osds") or Text.Contains(lowerText, "open source data science") then "OSDS"
-    else if Text.Contains(lowerText, "aa lab") then "AA Lab"
-    else if Text.Contains(lowerText, "data robot") then "Data Robot"
-    else "Other"
+Field Name
+Data Type
+Description
+API Ref ID
+Text
+Unique identifier for the API reference
+Avg_Flow_Tachyon_Duration
+Whole number
+Average duration (ms) for flow execution in Tachyon
+Avg_PVA_Duration
+Whole number
+Average Power Virtual Agent session duration (ms)
+Avg_Query_Response_Tachyon_Duration
+Whole number
+Average response time from Tachyon for query
+Book
+Text
+Name or ID of a book used in the flow (if applicable)
+Book-2
+Text
+Secondary book reference
+Book-3
+Text
+Tertiary book reference
+Bot Name
+Text
+Name of the bot used (e.g., Ava)
+count-of-answer-1-no
+Whole number
+Count of first questions answered with ‘no’
+count-of-answer-1-yes
+Whole number
+Count of first questions answered with ‘yes’
+count-of-answer-2-no
+Whole number
+Count of second questions answered with ‘no’
+count-of-answer-2-yes
+Whole number
+Count of second questions answered with ‘yes’
+count-of-answer-3-no
+Whole number
+Count of third questions answered with ‘no’
+count-of-answer-3-yes
+Whole number
+Count of third questions answered with ‘yes’
+count-of-errors
+Whole number
+Number of errors encountered during the chat flow
+count-of-feedback
+Whole number
+Number of feedback submissions
+count-of-final-answer-no
+Whole number
+Number of final answers marked as ‘no’
+count-of-final-answer-yes
+Whole number
+Number of final answers marked as ‘yes’
+CSAT Rating
+Whole number
+Customer Satisfaction (CSAT) rating value
+CSAT Rating-2
+Text
+Additional text-based CSAT feedback
+CSAT Rating-3
+Text
+Alternate or follow-up CSAT rating
+Did that answer your question?
+Text
+User response to satisfaction question
+Did that answer your question?-2
+Text
+Second instance of the satisfaction question
+Did that answer your question?-3
+Text
+Third instance of the satisfaction question
+Document ID
+Text
+Unique ID of the document referred to during the chat
+Employee ID
+Text
+Employee identifier (if internal user)
+Employee AID
+Text
+Employee’s alternate or system-generated ID
+Employee First Name
+Text
+First name of the employee
+Employee Last Name
+Text
+Last name of the employee
+Feedback ID
+Text
+Unique identifier for the feedback
+Feedback Text
+Text
+Text content of feedback submitted
+Feedback Text-2
+Text
+Secondary feedback text entry
+Feedback Text-3
+Text
+Tertiary feedback text entry
+Final did that Answer Your Question?
+Text
+Final recorded response for user satisfaction
+Final did that Answer Your Question?
+Text
+Final user response for satisfaction check
+Flow Tachyon Execution Time (Ms)
+Whole number
+Execution time of the chat flow using Tachyon (LLM) in milliseconds
+GetToken Expired
+True/False
+Indicates whether the access token expired during the session
+Link
+Text
+Generic link used in bot (e.g., help article or resource)
+Link-2
+Text
+Secondary link provided
+Link-3
+Text
+Tertiary link provided
+Model Score
+Text
+Confidence score from the ML/LLM model
+Model Score-2
+Text
+Second score metric (alternate model layer or version)
+Model Score-3
+Text
+Third score metric
+Outcome Error Description
+Text
+Description of any outcome error in response generation
+Presentation Context
+Text
+Context string for the first presentation block (e.g., user intent)
+Presentation Context-2
+Text
+Secondary context
+Presentation Context-3
+Text
+Tertiary context
+PVA Execution Time (Ms)
+Whole number
+Execution time for Power Virtual Agent (non-Tachyon)
+Query End Timestamp
+Text
+End time of the user query
+Query Flow Tachyon End Timestamp
+Date/time
+Timestamp when Tachyon finished processing
+Query Flow Tachyon Start Timestamp
+Date/time
+Timestamp when Tachyon started processing
+Query Flow End Timestamp
+Date/time
+End time of the query handled by the entire flow
+Query Start Timestamp
+Date/time
+Timestamp when the query was initiated
+Query Response Tachyon Execution Time (Ms)
+Whole number
+Time taken by Tachyon to generate and return response (in ms)
+Query Start Time
+Text
+General start time of the query (redundant if timestamp exists)
+Raw Context
+Text
+Original context before preprocessing
+Raw Context-2
+Text
+Additional raw context
+Raw Context-3
+Text
+Third layer of raw context
+RBAC Verified
+True/False
+Indicates if Role-Based Access Control was verified
+ReRanker Score
+Text
+Score assigned by the reranker (used to sort LLM responses)
+ReRanker Score-2
+Text
+Secondary reranker score
+ReRanker Score-3
+Text
+Tertiary reranker score
+Response
+Text
+Final bot response shown to user
+Response Outcome Status
+Text
+Status of the final response (e.g., success, fallback, error)
+Search Keyword
+Text
+Keyword extracted or used for query
+Section Name
+Text
+Section associated with the query
+Section Name-2
+Text
+Additional section reference
+Section Name-3
+Text
+Tertiary section reference
+Title
+Text
+Title shown to user (could be an article or page title)
+Title-2
+Text
+Secondary title
+Title-3
+Text
+Tertiary title
+User Profile
+Text
+Profile or classification of the user interacting with the bot (e.g., internal, customer, role-based tag)
+Would you like to try again?
+Text
+Captures user’s response to a prompt asking if they want to retry or rephrase their query (e.g., “Yes”, “No”)
+Bot Name
+Text
+Name of the bot (e.g., Ava) associated with the feedback
+Conversation Transcript ID
+Text
+Unique identifier for the full conversation session
+DateTime
+Text
+Timestamp of when the feedback was recorded (format: string)
+Feedback ID
+Whole number
+Unique ID assigned to each feedback instance
+id
+Text
+General unique ID (may be auto-generated for the row/entry)
+Metadata Bot ID
+Text
+Internal or system ID for the bot used (from metadata)
+Metadata Bot Name
+Text
+System-level or alternate naming of the bot (e.g., technical name)
+name
+Text
+Name of the feedback metric (e.g., “CSAT”, “response_quality”)
+newValue
+Text
+Value assigned during this feedback entry (e.g., “Yes”, “4”, etc.)
+Timestamp
+Whole number
+Epoch or Unix-style timestamp capturing feedback submission time
+type
+Text
+Type of metadata or feedback (e.g., “rating”, “comment”, “system”)
+ValueType
+Text
+Format or datatype of value (e.g., “string”, “integer”, “boolean”)
+
+
+
