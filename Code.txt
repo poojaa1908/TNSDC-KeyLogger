@@ -1,114 +1,14 @@
-Field Name
-Data Type
-Description
-average-engaged-session-duration
-Custom (Whole Number)
-Average duration of sessions where users were engaged
-Conversation Transcript ID
-Text
-Unique ID for the conversation
-count-of-abandoned
-Whole number
-Number of sessions where users abandoned mid-way
-count-of-engaged
-Whole number
-Number of sessions with active engagement
-count-of-handoffs
-Whole number
-Number of sessions escalated or handed off (to agent or system)
-count-of-resolved
-Whole number
-Number of sessions that were marked resolved
-count-of-sessions
-Whole number
-Total number of sessions
-count-of-unengaged
-Whole number
-Number of sessions with no active engagement
-End Time
-Text
-Time when session ended
-EndUtc
-DateTime
-UTC timestamp of session end
-isFinalCSAT
-Text
-Whether CSAT feedback was final (“Yes”/“No” or boolean)
-LinkedCSATs
-Text
-Linked customer satisfaction scores/IDs
-Session Duration in Seconds
-Whole number
-Total session duration in seconds
-Session No
-Decimal number
-Session sequence number (if available per user)
-StartUtc
-DateTime
-UTC timestamp when session started
-Timestamp
-Whole number
-General timestamp (Unix or epoch)
-Type
-Text
-Type of session (e.g., “engaged”, “abandoned”, etc.)
-ValueType
-Text
-Format of the recorded value (e.g., integer, string, datetime)
-AAD Tenant ID
-Text
-Azure Active Directory Tenant ID (tenant/user source)
-bot_conversationtranscript
-Text
-Full transcript captured by the bot
-bot_conversationtranscriptid
-Text
-Unique ID for the bot’s stored transcript
-Context
-Text
-Context of the interaction (user intent, situation, etc.)
-conversationtranscript
-Text
-Full user-facing or plain text transcript
-Created By
-Text
-Identifier of the creator of the session (user/bot/system)
-Created On
-Date/time
-Date and time when the session/conversation was created
-Metadata Bot ID
-Text
-Technical ID for the bot in metadata
-Metadata Bot Name
-Text
-Technical or internal name of the bot
-Bot Name
-Text
-Name of the bot (e.g., Ava) handling the session
-Conversation Transcript ID
-Text
-Unique ID for the conversation or session transcript
-employee_AU
-Text
-Employee’s AU identifier (internal organization-specific field)
-employee_FName
-Text
-First name of the employee
-employee_ID
-Text
-Unique employee ID
-employee_JobTitle
-Text
-Job title of the employee during the interaction
-employee_LName
-Text
-Last name of the employee
-Session Duration in Seconds
-Decimal number
-Duration of the session, recorded in seconds
-Session No
-Whole number
-Sequential session number (e.g., for tracking per user)
-Elapsed Time
-Decimal number
-Total time (in seconds or minutes) between start and end of session. Can be derived as End Time - Start Time
+avg-ratings = 
+VAR SelectedVA = VALUES('virtual_assistant_table'[Virtual Assistant])
+VAR FilteredRatings =
+    CALCULATETABLE(
+        'ratings',
+        TREATAS(SelectedVA, 'ratings'[Virtual Assistant])  // use the actual column name used in ratings table
+    )
+VAR AvgScore =
+    AVERAGEX(
+        FILTER(FilteredRatings, NOT ISBLANK('ratings'[castScore])),
+        'ratings'[castScore]
+    )
+RETURN
+ROUND(COALESCE(AvgScore, 0), 2)q
