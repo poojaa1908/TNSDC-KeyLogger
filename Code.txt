@@ -1,17 +1,14 @@
-KT 1 Summary:
-The first KT session covered the foundational aspects of the application’s user interface (UI). It began with an overview of the UI components and their roles within the system. Following that, the focus shifted to AutoSty, which likely refers to automatic styling or standardization practices in the UI for consistency. The session then explored vault key management and associated security mechanisms, emphasizing the importance of securing sensitive data through proper key handling. Finally, a triage and code overview was provided to help understand how to categorize, prioritize, and address issues in the codebase effectively, along with a general walkthrough of the system’s architecture.
+Please find below the minutes of the KT sessions held on Friday, 27th June and Tuesday, 2nd July.
 
-KT 2 Summary:
-The second KT session built upon UI knowledge with a specific focus on the IBH UI setup, guiding the setup process for working on the IBH interface. It then shifted toward Gradle, where an introduction was given about gradle.properties, build.gradle, and the gradlew command, helping to understand the structure and purpose of each file in build automation. The session also included a detailed explanation of the build.gradle file and how to interpret and work with it. There was a discussion on orchestration configurations, specifically highlighting configurations for Vault and Margenai, two important components in the system. Lastly, a code walkthrough was conducted to help team members familiarize themselves with key sections of the codebase.
+Attendees: Shishir, Abhisek, and Santhosh
+Duration: 30 minutes each
 
-KT 3 Summary:
-The third KT session was focused on the initial setup and integration tools. It began with instructions for the local development environment setup, guiding through the steps necessary to get the application running on a developer’s machine. This was followed by a session on GitHub workflows and GitScans, where Git-based security scans or SCA (Software Composition Analysis) practices were explained. The team was introduced to how scans are integrated into the CI/CD pipelines and their relevance in identifying vulnerable dependencies and ensuring secure code practices.
+27th June (Friday):
+Topics covered:
+	•	GPLVA Report
+	•	IChat Monitoring Command Center Report
 
-KT 4 Summary:
-In the fourth KT session, the discussion began with an explanation of Epic and Conductor IDP, which are likely orchestration platforms used to manage workflows or pipelines. The session then covered the usage and configuration of PCP and DCP, two internal components or deployment pipelines. A detailed breakdown of the release workflow was provided, explaining how code moves through different stages, and how scans are performed at each point to ensure security and compliance. Lastly, the session explained snapshot workflows, which manage intermediate versions of builds. Additional topics included managing feature and PR workflows, understanding the release candidate strategy (transitioning from snapshot to developer branch), and how to get and use image tags effectively in the development cycle.
-
-KT 5 Summary:
-The fifth KT session was focused on DCP and its role in the system’s architecture. The discussion covered how DCP operates, how it integrates with other components, and its importance in the deployment process. Additionally, the session introduced AVI health checks, which are mechanisms used to monitor the health and availability of applications, likely referring to AVI Networks (now part of VMware) load balancer or similar systems used to ensure service uptime and performance.
-
-KT 6 Summary:
-The sixth KT session continued the focus on DCP, delving deeper into its functionalities and configurations. It also introduced TAS and NCS, which appear to be specific modules or tools related to either testing or deployment. The discussion covered their purpose, how they connect with DCP, and their impact on overall system stability and deployment pipelines. This session helped in solidifying the understanding of backend services and orchestration tools being used in the project.
+2nd July (Tuesday):
+Topics covered:
+	•	Casey Report (including Casey + Casey Search)
+	•	AVA Report – Overview of the new changes implemented
