@@ -1,14 +1,11 @@
-avg-ratings = 
-VAR SelectedVA = VALUES('virtual_assistant_table'[Virtual Assistant])
-VAR FilteredRatings =
-    CALCULATETABLE(
-        'ratings',
-        TREATAS(SelectedVA, 'ratings'[Virtual Assistant])  // use the actual column name used in ratings table
-    )
-VAR AvgScore =
-    AVERAGEX(
-        FILTER(FilteredRatings, NOT ISBLANK('ratings'[castScore])),
-        'ratings'[castScore]
-    )
-RETURN
-ROUND(COALESCE(AvgScore, 0), 2)q
+1.	Go to your GitHub repository.
+	2.	Click on the “Pull requests” tab.
+	3.	Click on the “New pull request” button.
+	4.	At the top, you’ll see:
+Change base to the branch with the older version (e.g., main).
+	•	Change compare to the branch with the newer version (e.g., version2).
+
+5.	GitHub will show a full file-by-file diff:
+	•	✅ Added files
+	•	❌ Deleted files
+	•	✏️ Modified lines in existing files
