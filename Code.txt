@@ -1,14 +1,1 @@
-Please find below the minutes of the KT sessions held on Friday, 27th June and Tuesday, 2nd July.
-
-Attendees: Shishir, Abhisek, and Santhosh
-Duration: 30 minutes each
-
-27th June (Friday):
-Topics covered:
-	•	GPLVA Report
-	•	IChat Monitoring Command Center Report
-
-2nd July (Tuesday):
-Topics covered:
-	•	Casey Report (including Casey + Casey Search)
-	•	AVA Report – Overview of the new changes implemented
+This Proof of Concept (POC) demonstrates the capability of Alteryx to facilitate data transfer from Microsoft Dataverse to an on-premises environment. The objective is to explore and validate how Alteryx can be leveraged to establish seamless connectivity with Dataverse using the available data source options, extract relevant data, and ship it securely and efficiently to an on-prem target system. This POC highlights one of the core integration features of Alteryx and serves as a foundation for potential production-level implementations involving hybrid data architectures.
