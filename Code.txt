@@ -1,5 +1,90 @@
-https://<env>.crm.dynamics.com/api/data/v9.2/conversationtranscripts?$select=bot_conversationtranscriptidname,conversationtranscriptid,createdon,content&$filter=
-bot_conversationtranscriptidname ne null and
-createdon ge 2024-01-01T00:00:00Z and
-createdon le 2024-12-31T23:59:59Z
-&$orderby=createdon desc&$top=1000
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Font
+from docx import Document
+from docx.shared import RGBColor
+
+def write_colored_excel(csv_rows, output_excel_path):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Solution Comparison"
+    ws.append(['Change Type', 'File Path', 'Line Number', 'Line Content'])
+
+    # Color styles
+    color_map = {
+        'ADDED': PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid'),
+        'REMOVED': PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid'),
+        'CONTEXT': PatternFill(start_color='D9D9D9', end_color='D9D9D9', fill_type='solid')
+    }
+
+    for row in csv_rows:
+        ws.append(row)
+        change_type = row[0]
+        if change_type in color_map:
+            for col in range(1, 5):
+                ws.cell(row=ws.max_row, column=col).fill = color_map[change_type]
+
+    wb.save(output_excel_path)
+    print(f"📘 Excel diff saved to: {output_excel_path}")
+
+def write_colored_word(csv_rows, output_docx_path):
+    doc = Document()
+    doc.add_heading('PowerApps Solution Diff', level=1)
+
+    color_map = {
+        'ADDED': RGBColor(0, 128, 0),    # green
+        'REMOVED': RGBColor(255, 0, 0),  # red
+        'CONTEXT': RGBColor(128, 128, 128)  # gray
+    }
+
+    current_file = None
+
+    for row in csv_rows:
+        change_type, file_path, _, content = row
+
+        # Add file section header
+        if file_path != current_file:
+            doc.add_paragraph(f"\n🗂 File: {file_path}", style='Heading 2')
+            current_file = file_path
+
+        para = doc.add_paragraph()
+        run = para.add_run(content)
+
+        # Apply font color
+        run.font.color.rgb = color_map.get(change_type, RGBColor(0, 0, 0))
+        if change_type == 'ADDED':
+            run.text = "➕ " + run.text
+        elif change_type == 'REMOVED':
+            run.text = "➖ " + run.text
+        elif change_type == 'CONTEXT':
+            run.text = "   " + run.text
+
+    doc.save(output_docx_path)
+    print(f"📝 Word diff saved to: {output_docx_path}")
+
+# === USAGE ===
+solution1_path = r'C:\path\to\Solution1'
+solution2_path = r'C:\path\to\Solution2'
+
+text_output = 'powerapps_solution_diff.txt'
+csv_output = 'powerapps_solution_diff.csv'
+excel_output = 'powerapps_solution_diff.xlsx'
+word_output = 'powerapps_solution_diff.docx'
+
+# Generate raw diff and CSV
+compare_solutions(
+    folder1=solution1_path,
+    folder2=solution2_path,
+    output_txt_path=text_output,
+    output_csv_path=csv_output
+)
+
+# Load CSV rows again for Excel & Word
+import csv
+with open(csv_output, 'r', encoding='utf-8') as f:
+    reader = csv.reader(f)
+    next(reader)  # skip header
+    rows = list(reader)
+
+# Create Excel & Word colored versions
+write_colored_excel(rows, excel_output)
+write_colored_word(rows, word_output)
