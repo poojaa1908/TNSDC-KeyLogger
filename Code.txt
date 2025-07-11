@@ -1,5 +1,5 @@
 import os
-from difflib import SequenceMatcher, unified_diff
+from difflib import SequenceMatcher
 from pathlib import Path
 from docx import Document
 from docx.shared import RGBColor
@@ -11,28 +11,29 @@ def read_file_lines(file_path):
     except Exception as e:
         return [f"<<Error reading file: {e}>>\n"]
 
-def add_diff_line(doc, old_line, new_line):
+def highlight_diff_line(doc, old_line, new_line):
     para = doc.add_paragraph()
-
     matcher = SequenceMatcher(None, old_line, new_line)
-    for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
-        if opcode == 'equal':
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'equal':
             para.add_run(old_line[i1:i2])
-        elif opcode == 'insert':
-            run = para.add_run(new_line[j1:j2])
-            run.font.color.rgb = RGBColor(0, 128, 0)  # green for insert
-            run.bold = True
-        elif opcode == 'delete':
-            run = para.add_run(old_line[i1:i2])
-            run.font.color.rgb = RGBColor(255, 0, 0)  # red for delete
-            run.bold = True
-        elif opcode == 'replace':
+        elif tag == 'replace':
             run_old = para.add_run(old_line[i1:i2])
-            run_old.font.color.rgb = RGBColor(255, 0, 0)
+            run_old.font.color.rgb = RGBColor(255, 0, 0)  # red
             run_old.bold = True
+
             run_new = para.add_run(new_line[j1:j2])
-            run_new.font.color.rgb = RGBColor(0, 128, 0)
+            run_new.font.color.rgb = RGBColor(0, 128, 0)  # green
             run_new.bold = True
+        elif tag == 'delete':
+            run = para.add_run(old_line[i1:i2])
+            run.font.color.rgb = RGBColor(255, 0, 0)  # red
+            run.bold = True
+        elif tag == 'insert':
+            run = para.add_run(new_line[j1:j2])
+            run.font.color.rgb = RGBColor(0, 128, 0)  # green
+            run.bold = True
 
 def compare_solutions_to_word(folder1, folder2, output_docx_path):
     doc = Document()
@@ -48,7 +49,7 @@ def compare_solutions_to_word(folder1, folder2, output_docx_path):
     deleted = sorted(files1 - files2)
     common = sorted(files1 & files2)
 
-    # Added Files
+    # Added files
     doc.add_heading('🔼 Added Files', level=2)
     if added:
         for f in added:
@@ -56,7 +57,7 @@ def compare_solutions_to_word(folder1, folder2, output_docx_path):
     else:
         doc.add_paragraph("✅ No added files.")
 
-    # Deleted Files
+    # Deleted files
     doc.add_heading('🔽 Deleted Files', level=2)
     if deleted:
         for f in deleted:
@@ -64,7 +65,7 @@ def compare_solutions_to_word(folder1, folder2, output_docx_path):
     else:
         doc.add_paragraph("✅ No deleted files.")
 
-    # Modified Files
+    # Modified files
     doc.add_heading('📝 Modified Files', level=2)
     for rel_path in common:
         f1 = path1 / rel_path
@@ -75,15 +76,22 @@ def compare_solutions_to_word(folder1, folder2, output_docx_path):
 
         if lines1 != lines2:
             doc.add_paragraph(f"\n📄 File: {rel_path}", style='Heading 3')
-            diff = unified_diff(lines1, lines2, lineterm='')
 
-            for line in diff:
-                if line.startswith('---') or line.startswith('+++') or line.startswith('@@'):
-                    continue
-                if line.startswith('-') and not line.startswith('--'):
-                    add_diff_line(doc, line[1:], "")
-                elif line.startswith('+') and not line.startswith('++'):
-                    add_diff_line(doc, "", line[1:])
+            # Match line by line
+            matcher = SequenceMatcher(None, lines1, lines2)
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+                if tag == 'equal':
+                    for line in lines1[i1:i2]:
+                        doc.add_paragraph(line.strip())
+                elif tag == 'replace':
+                    for old, new in zip(lines1[i1:i2], lines2[j1:j2]):
+                        highlight_diff_line(doc, old.strip(), new.strip())
+                elif tag == 'delete':
+                    for old in lines1[i1:i2]:
+                        highlight_diff_line(doc, old.strip(), "")
+                elif tag == 'insert':
+                    for new in lines2[j1:j2]:
+                        highlight_diff_line(doc, "", new.strip())
 
     doc.save(output_docx_path)
     print(f"✅ Word report generated at: {output_docx_path}")
