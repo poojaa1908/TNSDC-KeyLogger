@@ -1,9 +1,42 @@
-def compare_solutions(folder1, folder2, output_txt_path, output_csv_path):
-    import difflib
-    from pathlib import Path
+import os
+from difflib import SequenceMatcher, unified_diff
+from pathlib import Path
+from docx import Document
+from docx.shared import RGBColor
 
-    report = []
-    csv_rows = []
+def read_file_lines(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            return f.readlines()
+    except Exception as e:
+        return [f"<<Error reading file: {e}>>\n"]
+
+def add_diff_line(doc, old_line, new_line):
+    para = doc.add_paragraph()
+
+    matcher = SequenceMatcher(None, old_line, new_line)
+    for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
+        if opcode == 'equal':
+            para.add_run(old_line[i1:i2])
+        elif opcode == 'insert':
+            run = para.add_run(new_line[j1:j2])
+            run.font.color.rgb = RGBColor(0, 128, 0)  # green for insert
+            run.bold = True
+        elif opcode == 'delete':
+            run = para.add_run(old_line[i1:i2])
+            run.font.color.rgb = RGBColor(255, 0, 0)  # red for delete
+            run.bold = True
+        elif opcode == 'replace':
+            run_old = para.add_run(old_line[i1:i2])
+            run_old.font.color.rgb = RGBColor(255, 0, 0)
+            run_old.bold = True
+            run_new = para.add_run(new_line[j1:j2])
+            run_new.font.color.rgb = RGBColor(0, 128, 0)
+            run_new.bold = True
+
+def compare_solutions_to_word(folder1, folder2, output_docx_path):
+    doc = Document()
+    doc.add_heading('PowerApps Solution Comparison Report', level=1)
 
     path1 = Path(folder1)
     path2 = Path(folder2)
@@ -15,79 +48,42 @@ def compare_solutions(folder1, folder2, output_txt_path, output_csv_path):
     deleted = sorted(files1 - files2)
     common = sorted(files1 & files2)
 
-    # === ADDED FILES ===
-    report.append("🔼 [ADDED FILES] - Present in Solution 2 but not in Solution 1:")
-    report.append("------------------------------------------------------------------")
+    # Added Files
+    doc.add_heading('🔼 Added Files', level=2)
     if added:
-        for file in added:
-            report.append(file)
-            csv_rows.append(['ADDED', file, '', 'Entire file is new'])
+        for f in added:
+            doc.add_paragraph(f"🟢 {f}")
     else:
-        report.append("✅ No added files.")
+        doc.add_paragraph("✅ No added files.")
 
-    # === DELETED FILES ===
-    report.append("\n🔽 [DELETED FILES] - Present in Solution 1 but not in Solution 2:")
-    report.append("------------------------------------------------------------------")
+    # Deleted Files
+    doc.add_heading('🔽 Deleted Files', level=2)
     if deleted:
-        for file in deleted:
-            report.append(file)
-            csv_rows.append(['REMOVED', file, '', 'Entire file was removed'])
+        for f in deleted:
+            doc.add_paragraph(f"🔴 {f}")
     else:
-        report.append("✅ No deleted files.")
+        doc.add_paragraph("✅ No deleted files.")
 
-    # === MODIFIED FILES ===
-    report.append("\n📝 [MODIFIED FILES] - Files that exist in both but have different content:")
-    report.append("-------------------------------------------------------------------------------")
-
+    # Modified Files
+    doc.add_heading('📝 Modified Files', level=2)
     for rel_path in common:
         f1 = path1 / rel_path
         f2 = path2 / rel_path
-
-        def read_file_lines(file_path):
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    return f.readlines()
-            except Exception as e:
-                return [f"<<Error reading file: {e}>>\n"]
 
         lines1 = read_file_lines(f1)
         lines2 = read_file_lines(f2)
 
         if lines1 != lines2:
-            report.append(f"\n🔄 File: {rel_path}")
-            report.append("--------------------------------------------------")
-            report.append("💡 Unified diff: '+' = Added, '-' = Removed, no symbol = Context\n")
-
-            diff = difflib.unified_diff(
-                lines1, lines2,
-                fromfile=f"OLD: {f1}",
-                tofile=f"NEW: {f2}",
-                lineterm=''
-            )
+            doc.add_paragraph(f"\n📄 File: {rel_path}", style='Heading 3')
+            diff = unified_diff(lines1, lines2, lineterm='')
 
             for line in diff:
-                report.append(line)
+                if line.startswith('---') or line.startswith('+++') or line.startswith('@@'):
+                    continue
+                if line.startswith('-') and not line.startswith('--'):
+                    add_diff_line(doc, line[1:], "")
+                elif line.startswith('+') and not line.startswith('++'):
+                    add_diff_line(doc, "", line[1:])
 
-                # For CSV — classify line
-                if line.startswith('+') and not line.startswith('+++'):
-                    csv_rows.append(['ADDED', rel_path, '', line.strip()])
-                elif line.startswith('-') and not line.startswith('---'):
-                    csv_rows.append(['REMOVED', rel_path, '', line.strip()])
-                elif not line.startswith(('+++', '---', '@@')):
-                    csv_rows.append(['CONTEXT', rel_path, '', line.strip()])
-
-    # === WRITE TO TEXT FILE ===
-    with open(output_txt_path, 'w', encoding='utf-8') as out_file:
-        out_file.write('\n'.join(report))
-
-    print(f"📄 Text diff saved to: {output_txt_path}")
-
-    # === WRITE TO CSV FILE ===
-    import csv
-    with open(output_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Change Type', 'File Path', 'Line Number', 'Line Content'])
-        for row in csv_rows:
-            writer.writerow(row)
-
-    print(f"📊 CSV diff saved to: {output_csv_path}")
+    doc.save(output_docx_path)
+    print(f"✅ Word report generated at: {output_docx_path}")
