@@ -1,13 +1,7 @@
-I wanted to inform you that Thursday will be my last working day as part of my 6-month winter internship with Wells Fargo.
+Just wanted to inform you that we’ve been facing some issues with the EVA report in Power BI. Recently, there’s been a noticeable increase in the number of users and conversations in EVA, and because of that, the report is hitting Power BI’s limitations and running into timeout issues.
 
-It has truly been a pleasure working with such a supportive and collaborative team. Over the past few months, I’ve learned a great deal and grown immensely, and I’m grateful for the opportunity to be a part of this journey.
+To fix this, we’re thinking of showing only the last six months to one year of data in the report. We also plan to enable incremental refresh so that future refreshes are smoother and don’t fail.
 
-A special thanks to Shishir and Umesh for their constant guidance and support throughout the internship—it truly made a big difference. I’d also like to thank Santhosh and Abhishek for being incredibly helpful in all ways and for making day-to-day work so much smoother.
+As of now, all scheduled refreshes in the PROD workspace are failing due to this issue. So before making this change, we just wanted to check with you—are you okay with this approach?
 
-I’ve completed the knowledge transition for the work I was handling, so everything is in place on that front.
-
-I’m excited to share that I’ll be rejoining Wells Fargo as a full-time employee starting August 25th, and I look forward to continuing this journey with you all.
-
-Please feel free to share any feedback you might have—I’d really appreciate it as I transition into the next phase of my career.
-
-Thank you once again for the incredible experience!
+Looking forward to your confirmation.
