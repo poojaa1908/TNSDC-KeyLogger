@@ -1,7 +1,7 @@
-Just wanted to inform you that we’ve been facing some issues with the EVA report in Power BI. Recently, there’s been a noticeable increase in the number of users and conversations in EVA, and because of that, the report is hitting Power BI’s limitations and running into timeout issues.
+Just to clarify — incremental refresh in Power BI doesn’t mean that the report will refresh multiple times per day. Instead, it means that only the new or updated data (for example, from the last few days) will be refreshed, rather than refreshing the entire dataset every time.
 
-To fix this, we’re thinking of showing only the last six months to one year of data in the report. We also plan to enable incremental refresh so that future refreshes are smoother and don’t fail.
+Right now, Power BI tries to reload all the EVA data each time it refreshes, which is causing the timeouts due to the large volume. With incremental refresh, Power BI will only fetch recent changes (like yesterday’s or today’s data), which is much faster and helps avoid those failures.
 
-As of now, all scheduled refreshes in the PROD workspace are failing due to this issue. So before making this change, we just wanted to check with you—are you okay with this approach?
+The number of refreshes per day will still depend on the schedule we set — like once a day or as needed — but each refresh will be lighter and more efficient.
 
-Looking forward to your confirmation.
+Hope this helps! Let me know if you’d like me to explain further or if you’re okay with moving ahead with this plan.
