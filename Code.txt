@@ -1,83 +1,67 @@
 import os
 from pathlib import Path
+from xml.etree import ElementTree as ET
 from difflib import SequenceMatcher, Differ
 from docx import Document
 from docx.shared import RGBColor
 
+
 def is_xml_file(file_path):
     return file_path.endswith('.xml') or file_path.endswith('.html')
+
 
 def flatten_xml(elem, depth=0):
     lines = []
     indent = '  ' * depth
     lines.append(f"{indent}<{elem.tag}>")
-    
     if elem.text and elem.text.strip():
         lines.append(f"{indent}  {elem.text.strip()}")
-    
     for child in elem:
         lines.extend(flatten_xml(child, depth + 1))
-    
     lines.append(f"{indent}</{elem.tag}>")
     return lines
 
+
 def read_file_lines(file_path):
+    file_path = str(file_path)
     try:
-        if file_path.endswith('.xml'):
-            from xml.etree import ElementTree as ET
+        if is_xml_file(file_path):
             tree = ET.parse(file_path)
             root = tree.getroot()
             return flatten_xml(root)
         else:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                return f.readlines()
+                return [line.rstrip() for line in f]
     except Exception as e:
         return [f"<<Error reading file: {e}>>\n"]
 
-def highlight_word_diff(doc, old_line, new_line, minimal=False):
-    if new_line.strip():
-        para_add = doc.add_paragraph()
-        old_tokens = old_line.strip().split()
-        new_tokens = new_line.strip().split()
 
-        inserted = [token for token in new_tokens if token not in old_tokens]
-        for token in new_tokens:
-            run = para_add.add_run(token + ' ')
-            if token in inserted:
-                run.font.color.rgb = RGBColor(0, 128, 0)
-                run.bold = True
-            elif not minimal:
-                run.bold = True  # white bold text
+def highlight_diff(doc, old_line, new_line, minimal=False):
+    para_add = doc.add_paragraph()
+    para_del = doc.add_paragraph()
 
-    if old_line.strip():
-        para_del = doc.add_paragraph()
-        old_tokens = old_line.strip().split()
-        new_tokens = new_line.strip().split()
+    old_tokens = old_line.strip().split()
+    new_tokens = new_line.strip().split()
 
-        deleted = [token for token in old_tokens if token not in new_tokens]
-        for token in old_tokens:
-            run = para_del.add_run(token + ' ')
-            if token in deleted:
-                run.font.color.rgb = RGBColor(255, 0, 0)
-                run.bold = True
-            elif not minimal:
-                run.bold = True
+    inserted = [token for token in new_tokens if token not in old_tokens]
+    deleted = [token for token in old_tokens if token not in new_tokens]
 
-def highlight_xml_diff(doc, old_line, new_line, minimal=False):
-    differ = Differ()
-    diff = list(differ.compare(old_line.strip().split(), new_line.strip().split()))
-    para = doc.add_paragraph()
-    for word in diff:
-        token = word[2:] + ' '
-        run = para.add_run(token)
-        if word.startswith('+ '):
+    for token in new_tokens:
+        run = para_add.add_run(token + ' ')
+        if token in inserted:
             run.font.color.rgb = RGBColor(0, 128, 0)  # Green
             run.bold = True
-        elif word.startswith('- '):
+        elif not minimal:
+            run.bold = True
+
+    for token in old_tokens:
+        run = para_del.add_run(token + ' ')
+        if token in deleted:
             run.font.color.rgb = RGBColor(255, 0, 0)  # Red
             run.bold = True
         elif not minimal:
             run.bold = True
+
 
 def compare_solutions_dual_docx(folder1, folder2, output_full_docx, output_diff_docx):
     full_doc = Document()
@@ -97,7 +81,7 @@ def compare_solutions_dual_docx(folder1, folder2, output_full_docx, output_diff_
     common = sorted(files1 & files2)
     modified = []
 
-    # === Summary Table in diff_doc ===
+    # === Summary Table ===
     diff_doc.add_heading("📊 Summary", level=2)
     table = diff_doc.add_table(rows=4, cols=2)
     table.style = 'Table Grid'
@@ -112,30 +96,22 @@ def compare_solutions_dual_docx(folder1, folder2, output_full_docx, output_diff_
     # === Added Files ===
     full_doc.add_heading('🔼 Added Files', level=2)
     diff_doc.add_heading('🔼 Added Files', level=2)
-    if added:
-        for i, f in enumerate(added, start=1):
-            full_doc.add_paragraph(f"{i}. 🟢 {f}")
-            diff_doc.add_paragraph(f"{i}. 🟢 {f}")
-    else:
-        full_doc.add_paragraph("✅ No added files.")
-        diff_doc.add_paragraph("✅ No added files.")
+    for i, f in enumerate(added, start=1):
+        full_doc.add_paragraph(f"{i}. 🟢 {f}")
+        diff_doc.add_paragraph(f"{i}. 🟢 {f}")
 
     # === Deleted Files ===
     full_doc.add_heading('🔽 Deleted Files', level=2)
     diff_doc.add_heading('🔽 Deleted Files', level=2)
-    if deleted:
-        for i, f in enumerate(deleted, start=1):
-            full_doc.add_paragraph(f"{i}. 🔴 {f}")
-            diff_doc.add_paragraph(f"{i}. 🔴 {f}")
-    else:
-        full_doc.add_paragraph("✅ No deleted files.")
-        diff_doc.add_paragraph("✅ No deleted files.")
+    for i, f in enumerate(deleted, start=1):
+        full_doc.add_paragraph(f"{i}. 🔴 {f}")
+        diff_doc.add_paragraph(f"{i}. 🔴 {f}")
 
     # === Modified Files ===
     full_doc.add_heading('📝 Modified Files', level=2)
     diff_doc.add_heading('📝 Modified Files', level=2)
 
-    modified_count = 0
+    mod_count = 0
     for rel_path in common:
         f1 = path1 / rel_path
         f2 = path2 / rel_path
@@ -143,48 +119,35 @@ def compare_solutions_dual_docx(folder1, folder2, output_full_docx, output_diff_
         lines1 = read_file_lines(f1)
         lines2 = read_file_lines(f2)
 
-        if lines1 != lines2:
-            modified_count += 1
+        if SequenceMatcher(None, lines1, lines2).ratio() < 1.0:
+            mod_count += 1
             modified.append(rel_path)
-
-            full_doc.add_paragraph(f"File {modified_count}: 📄 {rel_path}", style='Heading 3')
-            diff_doc.add_paragraph(f"File {modified_count}: 📄 {rel_path}", style='Heading 3')
+            full_doc.add_paragraph(f"File {mod_count}: 📄 {rel_path}", style='Heading 3')
+            diff_doc.add_paragraph(f"File {mod_count}: 📄 {rel_path}", style='Heading 3')
 
             matcher = SequenceMatcher(None, lines1, lines2)
             for tag, i1, i2, j1, j2 in matcher.get_opcodes():
                 if tag == 'equal':
                     for line in lines1[i1:i2]:
-                        full_doc.add_paragraph(line.strip())
+                        full_doc.add_paragraph(line)
                 elif tag == 'replace':
                     for old, new in zip(lines1[i1:i2], lines2[j1:j2]):
-                        if is_xml_file(rel_path):
-                            highlight_xml_diff(full_doc, old.strip(), new.strip(), minimal=False)
-                            highlight_xml_diff(diff_doc, old.strip(), new.strip(), minimal=True)
-                        else:
-                            highlight_word_diff(full_doc, old.strip(), new.strip(), minimal=False)
-                            highlight_word_diff(diff_doc, old.strip(), new.strip(), minimal=True)
+                        highlight_diff(full_doc, old, new, minimal=False)
+                        highlight_diff(diff_doc, old, new, minimal=True)
                 elif tag == 'delete':
                     for old in lines1[i1:i2]:
-                        if is_xml_file(rel_path):
-                            highlight_xml_diff(full_doc, old.strip(), "", minimal=False)
-                            highlight_xml_diff(diff_doc, old.strip(), "", minimal=True)
-                        else:
-                            highlight_word_diff(full_doc, old.strip(), "", minimal=False)
-                            highlight_word_diff(diff_doc, old.strip(), "", minimal=True)
+                        highlight_diff(full_doc, old, "", minimal=False)
+                        highlight_diff(diff_doc, old, "", minimal=True)
                 elif tag == 'insert':
                     for new in lines2[j1:j2]:
-                        if is_xml_file(rel_path):
-                            highlight_xml_diff(full_doc, "", new.strip(), minimal=False)
-                            highlight_xml_diff(diff_doc, "", new.strip(), minimal=True)
-                        else:
-                            highlight_word_diff(full_doc, "", new.strip(), minimal=False)
-                            highlight_word_diff(diff_doc, "", new.strip(), minimal=True)
+                        highlight_diff(full_doc, "", new, minimal=False)
+                        highlight_diff(diff_doc, "", new, minimal=True)
 
-    # Update summary
-    table.cell(3, 1).text = str(modified_count)
+    # Finalize summary
+    table.cell(3, 1).text = str(mod_count)
 
-    # Save documents
+    # Save
     full_doc.save(output_full_docx)
     diff_doc.save(output_diff_docx)
-    print(f"✅ Full report saved to: {output_full_docx}")
-    print(f"✅ Changes-only report saved to: {output_diff_docx}")
+    print(f"✅ Full report saved: {output_full_docx}")
+    print(f"✅ Changes-only report saved: {output_diff_docx}")
