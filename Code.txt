@@ -22,7 +22,7 @@ def read_lines_safe(filepath):
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             return f.readlines()
-    except (PermissionError, UnicodeDecodeError):
+    except (PermissionError, UnicodeDecodeError, FileNotFoundError):
         return None
 
 def compare_files(file1, file2):
@@ -68,7 +68,7 @@ def generate_report(changes, summary, output_file='Comparison_Report.docx'):
         row[0].text = k.capitalize()
         row[1].text = str(v)
 
-    doc.add_heading('Changes', level=1)
+    doc.add_heading('Detailed Changes', level=1)
     for file, old_line, new_line in changes:
         p = doc.add_paragraph()
         p.add_run(f'File: {file}\n').bold = True
@@ -112,16 +112,17 @@ def compare_folders_recursive(folder1, folder2):
         elif f2 and not f1:
             summary['added'] += 1
         else:
-            diffs = compare_files(f1, f2)
-            if diffs:
-                summary['modified'] += 1
-                changes.extend(diffs)
+            if isinstance(f1, str) and isinstance(f2, str):
+                diffs = compare_files(f1, f2)
+                if diffs:
+                    summary['modified'] += 1
+                    changes.extend(diffs)
 
     return changes, summary
 
 # === RUN ===
-folder1 = 'solution_v1'  # Replace with your actual folder path
-folder2 = 'solution_v2'  # Replace with your actual folder path
+folder1 = 'solution_v1'  # Update with actual path
+folder2 = 'solution_v2'  # Update with actual path
 
 if not os.path.isdir(folder1) or not os.path.isdir(folder2):
     print("❌ One or both folders do not exist.")
