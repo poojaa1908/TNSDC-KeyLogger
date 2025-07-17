@@ -1,111 +1,91 @@
 import os
 import difflib
-from docx import Document
-from docx.shared import RGBColor
+import codecs
+from bs4 import BeautifulSoup
 
-def read_file_lines(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read().splitlines()
-    except Exception:
-        return []
+def read_file_content(file_path):
+    with codecs.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        return f.read()
 
-def get_all_files(folder):
-    all_files = {}
-    for root, _, files in os.walk(folder):
+def get_all_files(folder_path):
+    all_files = []
+    for root, dirs, files in os.walk(folder_path):
         for file in files:
-            relative_path = os.path.relpath(os.path.join(root, file), folder)
-            all_files[relative_path] = os.path.join(root, file)
+            relative_path = os.path.relpath(os.path.join(root, file), folder_path)
+            all_files.append(relative_path.replace("\\", "/"))
     return all_files
 
-def get_diffs(file1, file2):
-    lines1 = read_file_lines(file1)
-    lines2 = read_file_lines(file2)
+def generate_inline_diff(from_text, to_text):
+    differ = difflib.Differ()
+    from_lines = from_text.splitlines()
+    to_lines = to_text.splitlines()
 
-    diff = difflib.ndiff(lines1, lines2)
-    changes = []
-    for line in diff:
-        if line.startswith('+ '):
-            changes.append(('add', line[2:]))
-        elif line.startswith('- '):
-            changes.append(('remove', line[2:]))
-    return changes
+    html = difflib.HtmlDiff(wrapcolumn=120).make_file(from_lines, to_lines, context=True, numlines=3)
 
-def highlight_text(paragraph, text, color=None):
-    run = paragraph.add_run(text)
-    if color == 'green':
-        run.font.color.rgb = RGBColor(0, 128, 0)
-    elif color == 'red':
-        run.font.color.rgb = RGBColor(255, 0, 0)
-    return run
+    soup = BeautifulSoup(html, 'html.parser')
 
-def write_diff_to_docx(added, removed, modified):
-    doc = Document()
-    changes_only = Document()
+    for table in soup.find_all('table'):
+        table['style'] = 'border-collapse: collapse; width: 100%;'
+    for td in soup.find_all('td'):
+        td['style'] = 'padding: 4px; font-family: monospace;'
 
-    # --- Summary ---
-    doc.add_heading('📄 File Comparison Summary', level=1)
+    for tag in soup.find_all(['td', 'th']):
+        if 'diff_add' in tag.get('class', []):
+            tag['style'] += ' color: green; font-weight: bold;'
+        elif 'diff_sub' in tag.get('class', []):
+            tag['style'] += ' color: red; font-weight: bold;'
+        elif 'diff_chg' in tag.get('class', []):
+            tag['style'] += ' color: orange; font-weight: bold;'
 
-    doc.add_heading("🟢 Added Files", level=2)
-    if added:
-        for idx, file in enumerate(added, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
+    return str(soup)
 
-    doc.add_heading("🔴 Removed Files", level=2)
-    if removed:
-        for idx, file in enumerate(removed, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
+def compare_folders(folder1, folder2, output_file):
+    files1 = set(get_all_files(folder1))
+    files2 = set(get_all_files(folder2))
 
-    doc.add_heading("🟡 Modified Files", level=2)
-    if modified:
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_paragraph(f"File {idx}: {file} (Changed lines: {len(diffs)})")
-    else:
-        doc.add_paragraph("None")
+    added_files = sorted(list(files2 - files1))
+    deleted_files = sorted(list(files1 - files2))
+    common_files = sorted(list(files1 & files2))
 
-    # --- Modified File Details ---
-    if modified:
-        doc.add_page_break()
-        doc.add_heading("📝 Modified File Details", level=1)
-        changes_only.add_heading("📝 Changed Lines in Modified Files", level=1)
+    modified_files = []
+    diff_sections = []
+    file_counter = 1
 
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_heading(f"File {idx}: {file}", level=2)
-            changes_only.add_heading(f"File {idx}: {file}", level=2)
-
-            for change_type, line in diffs:
-                para1 = doc.add_paragraph()
-                para2 = changes_only.add_paragraph()
-                color = 'green' if change_type == 'add' else 'red'
-                highlight_text(para1, line, color)
-                highlight_text(para2, line, color)
-
-    doc.save("comparison_result.docx")
-    changes_only.save("modified_files_changes_only.docx")
-    print("✅ Docs saved as comparison_result.docx and modified_files_changes_only.docx")
-
-def compare_folders(folder1, folder2):
-    files1 = get_all_files(folder1)
-    files2 = get_all_files(folder2)
-
-    added = [f for f in files2 if f not in files1]
-    removed = [f for f in files1 if f not in files2]
-
-    modified = {}
-    common_files = [f for f in files1 if f in files2]
     for file in common_files:
-        diffs = get_diffs(files1[file], files2[file])
-        if diffs:
-            modified[file] = diffs
+        path1 = os.path.join(folder1, file)
+        path2 = os.path.join(folder2, file)
 
-    write_diff_to_docx(added, removed, modified)
+        content1 = read_file_content(path1)
+        content2 = read_file_content(path2)
 
-# Example usage
-if __name__ == "__main__":
-    folder_path_1 = "path/to/folder1"
-    folder_path_2 = "path/to/folder2"
-    compare_folders(folder_path_1, folder_path_2)
+        if content1 != content2:
+            modified_files.append(file)
+            file_diff = generate_inline_diff(content1, content2)
+            diff_sections.append(f"<h2>File {file_counter}: {file}</h2>\n{file_diff}")
+            file_counter += 1
+
+    # Generate plain text summary
+    summary_text = (
+        "===== SUMMARY =====\n"
+        f"Added Files   : {len(added_files)}\n"
+        f"Deleted Files : {len(deleted_files)}\n"
+        f"Modified Files: {len(modified_files)}\n"
+        "====================\n\n"
+    )
+
+    # HTML diffs only
+    html_diff_body = "<html><head><meta charset='UTF-8'></head><body>" + ''.join(diff_sections) + "</body></html>"
+
+    # Write final file: plain text summary followed by HTML
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(summary_text)
+        f.write(html_diff_body)
+
+    print(f"✅ Comparison report generated: {output_file}")
+
+# Example usage:
+folder1 = "SolutionFolder_V1"
+folder2 = "SolutionFolder_V2"
+output_file = "comparison_report.html"
+
+compare_folders(folder1, folder2, output_file)
