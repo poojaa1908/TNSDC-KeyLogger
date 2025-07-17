@@ -64,20 +64,22 @@ def compare_folders(folder1, folder2, output_file):
             diff_sections.append(f"<h2>File {file_counter}: {file}</h2>\n{file_diff}")
             file_counter += 1
 
-    # Print console summary (not in HTML)
-    print("\n===== 🔍 SUMMARY =====")
-    print(f"{'Category':<20} | {'Count':<5}")
-    print("-" * 30)
-    print(f"{'Added Files':<20} | {len(added_files):<5}")
-    print(f"{'Deleted Files':<20} | {len(deleted_files):<5}")
-    print(f"{'Modified Files':<20} | {len(modified_files):<5}")
-    print("=" * 30 + "\n")
+    # Generate plain text summary
+    summary_text = (
+        "===== SUMMARY =====\n"
+        f"Added Files   : {len(added_files)}\n"
+        f"Deleted Files : {len(deleted_files)}\n"
+        f"Modified Files: {len(modified_files)}\n"
+        "====================\n\n"
+    )
 
-    # Generate HTML with only diffs (no summary)
-    full_html = "<html><head><meta charset='UTF-8'></head><body>" + ''.join(diff_sections) + "</body></html>"
+    # HTML diffs only
+    html_diff_body = "<html><head><meta charset='UTF-8'></head><body>" + ''.join(diff_sections) + "</body></html>"
 
+    # Write final file: plain text summary followed by HTML
     with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(full_html)
+        f.write(summary_text)
+        f.write(html_diff_body)
 
     print(f"✅ Comparison report generated: {output_file}")
 
