@@ -1,128 +1,24 @@
-import os
-import difflib
-from docx import Document
-from docx.shared import RGBColor, Inches
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-
-def read_file_lines(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read().splitlines()
-    except Exception:
-        return []
-
-def get_all_files(folder):
-    all_files = {}
-    for root, _, files in os.walk(folder):
-        for file in files:
-            relative_path = os.path.relpath(os.path.join(root, file), folder)
-            all_files[relative_path] = os.path.join(root, file)
-    return all_files
 
 def get_diffs(file1, file2):
     lines1 = read_file_lines(file1)
     lines2 = read_file_lines(file2)
 
-    diff = difflib.ndiff(lines1, lines2)
+    matcher = difflib.SequenceMatcher(None, lines1, lines2)
     changes = []
-    for line in diff:
-        if line.startswith('+ '):
-            changes.append(('add', line[2:]))
-        elif line.startswith('- '):
-            changes.append(('remove', line[2:]))
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == 'insert':
+            for line in lines2[j1:j2]:
+                changes.append(('add', line))
+        elif tag == 'delete':
+            for line in lines1[i1:i2]:
+                changes.append(('remove', line))
+        elif tag == 'replace':
+            # Real change (not just line shift)
+            old = lines1[i1:i2]
+            new = lines2[j1:j2]
+            for line in old:
+                changes.append(('remove', line))
+            for line in new:
+                changes.append(('add', line))
     return changes
-
-def highlight_text(paragraph, text, color=None):
-    run = paragraph.add_run(text)
-    if color == 'green':
-        run.font.color.rgb = RGBColor(0, 128, 0)
-    elif color == 'red':
-        run.font.color.rgb = RGBColor(255, 0, 0)
-    return run
-
-def write_diff_to_docx(added, removed, modified):
-    doc = Document()
-    changes_only = Document()
-
-    # --- Summary Header ---
-    doc.add_heading('📄 File Comparison Summary', level=1)
-
-    # Summary Table
-    table = doc.add_table(rows=2, cols=3)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = '🟢 Added Files'
-    hdr_cells[1].text = '🔴 Removed Files'
-    hdr_cells[2].text = '🟡 Modified Files'
-
-    val_cells = table.rows[1].cells
-    val_cells[0].text = str(len(added))
-    val_cells[1].text = str(len(removed))
-    val_cells[2].text = str(len(modified))
-
-    doc.add_paragraph()  # Spacer
-
-    doc.add_heading("🟢 Added Files", level=2)
-    if added:
-        for idx, file in enumerate(added, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
-
-    doc.add_heading("🔴 Removed Files", level=2)
-    if removed:
-        for idx, file in enumerate(removed, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
-
-    doc.add_heading("🟡 Modified Files", level=2)
-    if modified:
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_paragraph(f"File {idx}: {file} (Changed lines: {len(diffs)})")
-    else:
-        doc.add_paragraph("None")
-
-    # --- Modified File Details ---
-    if modified:
-        doc.add_page_break()
-        doc.add_heading("📝 Modified File Details", level=1)
-        changes_only.add_heading("📝 Changed Lines in Modified Files", level=1)
-
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_heading(f"File {idx}: {file}", level=2)
-            changes_only.add_heading(f"File {idx}: {file}", level=2)
-
-            for change_type, line in diffs:
-                para1 = doc.add_paragraph()
-                para2 = changes_only.add_paragraph()
-                color = 'green' if change_type == 'add' else 'red'
-                highlight_text(para1, line, color)
-                highlight_text(para2, line, color)
-
-    doc.save("comparison_result.docx")
-    changes_only.save("modified_files_changes_only.docx")
-    print("✅ Docs saved as comparison_result.docx and modified_files_changes_only.docx")
-
-def compare_folders(folder1, folder2):
-    files1 = get_all_files(folder1)
-    files2 = get_all_files(folder2)
-
-    added = [f for f in files2 if f not in files1]
-    removed = [f for f in files1 if f not in files2]
-
-    modified = {}
-    common_files = [f for f in files1 if f in files2]
-    for file in common_files:
-        diffs = get_diffs(files1[file], files2[file])
-        if diffs:
-            modified[file] = diffs
-
-    write_diff_to_docx(added, removed, modified)
-
-# Example usage
-if __name__ == "__main__":
-    folder_path_1 = "path/to/folder1"
-    folder_path_2 = "path/to/folder2"
-    compare_folders(folder_path_1, folder_path_2)
