@@ -1,132 +1,115 @@
 import os
-from difflib import SequenceMatcher
+import difflib
 from docx import Document
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Pt
 
-def highlight_diff_words(old, new):
-    matcher = SequenceMatcher(None, old, new)
-    diffs = []
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'equal':
-            diffs.append(('equal', new[j1:j2]))
-        elif tag == 'insert':
-            diffs.append(('insert', new[j1:j2]))
-        elif tag == 'delete':
-            diffs.append(('delete', old[i1:i2]))
-        elif tag == 'replace':
-            diffs.append(('delete', old[i1:i2]))
-            diffs.append(('insert', new[j1:j2]))
-    return diffs
-
-def read_lines_safe(filepath):
+def read_file_lines(file_path):
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             return f.readlines()
-    except (PermissionError, UnicodeDecodeError, FileNotFoundError):
-        return None
-
-def compare_files(file1, file2):
-    lines1 = read_lines_safe(file1)
-    lines2 = read_lines_safe(file2)
-    if lines1 is None or lines2 is None:
+    except Exception as e:
+        print(f"⚠️ Could not read {file_path}: {e}")
         return []
 
-    matcher = SequenceMatcher(None, lines1, lines2)
-    changes = []
+def add_colored_paragraph(doc, line, color_rgb, bold=False):
+    para = doc.add_paragraph()
+    run = para.add_run(line.rstrip('\n'))
+    run.font.color.rgb = color_rgb
+    run.font.bold = bold
+    run.font.name = 'Courier New'
+    run.font.size = Pt(9)
 
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == 'equal':
-            continue
-        for offset in range(max(i2 - i1, j2 - j1)):
-            old_line = lines1[i1 + offset].strip() if i1 + offset < i2 else ''
-            new_line = lines2[j1 + offset].strip() if j1 + offset < j2 else ''
-            if old_line != new_line:
-                changes.append((file1, old_line, new_line))
-    return changes
+def add_table_summary(doc, added, deleted, modified):
+    doc.add_heading('Summary of Comparison', level=1)
+    table = doc.add_table(rows=4, cols=2)
+    table.style = 'Table Grid'
+    table.cell(0, 0).text = 'Metric'
+    table.cell(0, 1).text = 'Count'
+    table.cell(1, 0).text = 'Added Files'
+    table.cell(1, 1).text = str(added)
+    table.cell(2, 0).text = 'Deleted Files'
+    table.cell(2, 1).text = str(deleted)
+    table.cell(3, 0).text = 'Modified Files'
+    table.cell(3, 1).text = str(modified)
+    doc.add_paragraph()  # Spacer
 
-def add_colored_run(paragraph, text, color):
-    run = paragraph.add_run(text)
-    if color == 'green':
-        run.font.color.rgb = RGBColor(0, 128, 0)
-    elif color == 'red':
-        run.font.color.rgb = RGBColor(255, 0, 0)
-    else:
-        run.font.color.rgb = RGBColor(0, 0, 0)
+def compare_file_content(file1, file2, doc, index):
+    lines1 = read_file_lines(file1)
+    lines2 = read_file_lines(file2)
+    diff = difflib.ndiff(lines1, lines2)
 
-def generate_report(changes, summary, output_file='Comparison_Report.docx'):
-    doc = Document()
-    doc.add_heading('Power Apps Solution Comparison Report', 0)
-
-    doc.add_heading('Summary', level=1)
-    table = doc.add_table(rows=1, cols=2)
-    hdr = table.rows[0].cells
-    hdr[0].text = 'Change Type'
-    hdr[1].text = 'Count'
-
-    for k, v in summary.items():
-        row = table.add_row().cells
-        row[0].text = k.capitalize()
-        row[1].text = str(v)
-
-    doc.add_heading('Detailed Changes', level=1)
-    for file, old_line, new_line in changes:
-        p = doc.add_paragraph()
-        p.add_run(f'File: {file}\n').bold = True
-
-        diffs = highlight_diff_words(old_line, new_line)
-        for tag, part in diffs:
-            if tag == 'equal':
-                add_colored_run(p, part, 'black')
-            elif tag == 'insert':
-                add_colored_run(p, part, 'green')
-            elif tag == 'delete':
-                add_colored_run(p, part, 'red')
-        doc.add_paragraph()
-
-    doc.save(output_file)
-
-def list_all_files(root):
-    files = {}
-    for dirpath, _, filenames in os.walk(root):
-        for name in filenames:
-            full_path = os.path.join(dirpath, name)
-            relative_path = os.path.relpath(full_path, root)
-            files[relative_path] = full_path
-    return files
-
-def compare_folders_recursive(folder1, folder2):
-    changes = []
-    summary = {'added': 0, 'deleted': 0, 'modified': 0}
-
-    files1 = list_all_files(folder1)
-    files2 = list_all_files(folder2)
-
-    all_keys = set(files1.keys()).union(files2.keys())
-
-    for key in all_keys:
-        f1 = files1.get(key)
-        f2 = files2.get(key)
-
-        if f1 and not f2:
-            summary['deleted'] += 1
-        elif f2 and not f1:
-            summary['added'] += 1
+    doc.add_paragraph(f'Modified File {index}: {os.path.relpath(file1)}').bold = True
+    for line in diff:
+        if line.startswith('+ '):
+            add_colored_paragraph(doc, line, RGBColor(0, 128, 0), bold=True)  # Green
+        elif line.startswith('- '):
+            add_colored_paragraph(doc, line, RGBColor(255, 0, 0), bold=True)  # Red
+        elif line.startswith('? '):
+            continue  # Skip ndiff hints
         else:
-            if isinstance(f1, str) and isinstance(f2, str):
-                diffs = compare_files(f1, f2)
-                if diffs:
-                    summary['modified'] += 1
-                    changes.extend(diffs)
+            add_colored_paragraph(doc, line, RGBColor(0, 0, 0))  # Black
+    doc.add_paragraph()
 
-    return changes, summary
+def compare_folders(folder1, folder2, output_docx_path):
+    doc = Document()
+    folder1_files = set()
+    folder2_files = set()
 
-# === RUN ===
-folder1 = 'solution_v1'  # Update with actual path
-folder2 = 'solution_v2'  # Update with actual path
+    added_files = []
+    deleted_files = []
+    modified_files = []
 
-if not os.path.isdir(folder1) or not os.path.isdir(folder2):
-    print("❌ One or both folders do not exist.")
-else:
-    changes, summary = compare_folders_recursive(folder1, folder2)
-    generate_report(changes, summary)
-    print("✅ 'Comparison_Report.docx' generated successfully.")
+    # Get all files in folder1
+    for dirpath, _, filenames in os.walk(folder1):
+        for f in filenames:
+            full_path = os.path.join(dirpath, f)
+            rel_path = os.path.relpath(full_path, folder1)
+            folder1_files.add(rel_path)
+
+    # Get all files in folder2
+    for dirpath, _, filenames in os.walk(folder2):
+        for f in filenames:
+            full_path = os.path.join(dirpath, f)
+            rel_path = os.path.relpath(full_path, folder2)
+            folder2_files.add(rel_path)
+
+    all_files = folder1_files.union(folder2_files)
+    mod_index = 1
+
+    for rel_path in sorted(all_files):
+        path1 = os.path.join(folder1, rel_path)
+        path2 = os.path.join(folder2, rel_path)
+
+        if rel_path not in folder1_files:
+            added_files.append(rel_path)
+            doc.add_paragraph(f'Added File: {rel_path}').bold = True
+            lines = read_file_lines(path2)
+            for line in lines:
+                add_colored_paragraph(doc, line, RGBColor(0, 128, 0))
+            doc.add_paragraph()
+        elif rel_path not in folder2_files:
+            deleted_files.append(rel_path)
+            doc.add_paragraph(f'Deleted File: {rel_path}').bold = True
+            lines = read_file_lines(path1)
+            for line in lines:
+                add_colored_paragraph(doc, line, RGBColor(255, 0, 0))
+            doc.add_paragraph()
+        else:
+            lines1 = read_file_lines(path1)
+            lines2 = read_file_lines(path2)
+            if lines1 != lines2:
+                modified_files.append(rel_path)
+                compare_file_content(path1, path2, doc, mod_index)
+                mod_index += 1
+
+    # Add summary at the top
+    summary_doc = Document()
+    add_table_summary(summary_doc, len(added_files), len(deleted_files), len(modified_files))
+    for element in doc.element.body:
+        summary_doc.element.body.append(element)
+
+    summary_doc.save(output_docx_path)
+    print(f"✅ Document saved: {output_docx_path}")
+
+# === USAGE ===
+compare_folders('solution_v1', 'solution_v2', 'Comparison_Report.docx')
