@@ -1,115 +1,111 @@
 import os
 import difflib
 from docx import Document
-from docx.shared import RGBColor, Pt
+from docx.shared import RGBColor
 
 def read_file_lines(file_path):
     try:
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            return f.readlines()
-    except Exception as e:
-        print(f"⚠️ Could not read {file_path}: {e}")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read().splitlines()
+    except Exception:
         return []
 
-def add_colored_paragraph(doc, line, color_rgb, bold=False):
-    para = doc.add_paragraph()
-    run = para.add_run(line.rstrip('\n'))
-    run.font.color.rgb = color_rgb
-    run.font.bold = bold
-    run.font.name = 'Courier New'
-    run.font.size = Pt(9)
+def get_all_files(folder):
+    all_files = {}
+    for root, _, files in os.walk(folder):
+        for file in files:
+            relative_path = os.path.relpath(os.path.join(root, file), folder)
+            all_files[relative_path] = os.path.join(root, file)
+    return all_files
 
-def add_table_summary(doc, added, deleted, modified):
-    doc.add_heading('Summary of Comparison', level=1)
-    table = doc.add_table(rows=4, cols=2)
-    table.style = 'Table Grid'
-    table.cell(0, 0).text = 'Metric'
-    table.cell(0, 1).text = 'Count'
-    table.cell(1, 0).text = 'Added Files'
-    table.cell(1, 1).text = str(added)
-    table.cell(2, 0).text = 'Deleted Files'
-    table.cell(2, 1).text = str(deleted)
-    table.cell(3, 0).text = 'Modified Files'
-    table.cell(3, 1).text = str(modified)
-    doc.add_paragraph()  # Spacer
-
-def compare_file_content(file1, file2, doc, index):
+def get_diffs(file1, file2):
     lines1 = read_file_lines(file1)
     lines2 = read_file_lines(file2)
-    diff = difflib.ndiff(lines1, lines2)
 
-    doc.add_paragraph(f'Modified File {index}: {os.path.relpath(file1)}').bold = True
+    diff = difflib.ndiff(lines1, lines2)
+    changes = []
     for line in diff:
         if line.startswith('+ '):
-            add_colored_paragraph(doc, line, RGBColor(0, 128, 0), bold=True)  # Green
+            changes.append(('add', line[2:]))
         elif line.startswith('- '):
-            add_colored_paragraph(doc, line, RGBColor(255, 0, 0), bold=True)  # Red
-        elif line.startswith('? '):
-            continue  # Skip ndiff hints
-        else:
-            add_colored_paragraph(doc, line, RGBColor(0, 0, 0))  # Black
-    doc.add_paragraph()
+            changes.append(('remove', line[2:]))
+    return changes
 
-def compare_folders(folder1, folder2, output_docx_path):
+def highlight_text(paragraph, text, color=None):
+    run = paragraph.add_run(text)
+    if color == 'green':
+        run.font.color.rgb = RGBColor(0, 128, 0)
+    elif color == 'red':
+        run.font.color.rgb = RGBColor(255, 0, 0)
+    return run
+
+def write_diff_to_docx(added, removed, modified):
     doc = Document()
-    folder1_files = set()
-    folder2_files = set()
+    changes_only = Document()
 
-    added_files = []
-    deleted_files = []
-    modified_files = []
+    # --- Summary ---
+    doc.add_heading('📄 File Comparison Summary', level=1)
 
-    # Get all files in folder1
-    for dirpath, _, filenames in os.walk(folder1):
-        for f in filenames:
-            full_path = os.path.join(dirpath, f)
-            rel_path = os.path.relpath(full_path, folder1)
-            folder1_files.add(rel_path)
+    doc.add_heading("🟢 Added Files", level=2)
+    if added:
+        for idx, file in enumerate(added, 1):
+            doc.add_paragraph(f"File {idx}: {file}")
+    else:
+        doc.add_paragraph("None")
 
-    # Get all files in folder2
-    for dirpath, _, filenames in os.walk(folder2):
-        for f in filenames:
-            full_path = os.path.join(dirpath, f)
-            rel_path = os.path.relpath(full_path, folder2)
-            folder2_files.add(rel_path)
+    doc.add_heading("🔴 Removed Files", level=2)
+    if removed:
+        for idx, file in enumerate(removed, 1):
+            doc.add_paragraph(f"File {idx}: {file}")
+    else:
+        doc.add_paragraph("None")
 
-    all_files = folder1_files.union(folder2_files)
-    mod_index = 1
+    doc.add_heading("🟡 Modified Files", level=2)
+    if modified:
+        for idx, (file, diffs) in enumerate(modified.items(), 1):
+            doc.add_paragraph(f"File {idx}: {file} (Changed lines: {len(diffs)})")
+    else:
+        doc.add_paragraph("None")
 
-    for rel_path in sorted(all_files):
-        path1 = os.path.join(folder1, rel_path)
-        path2 = os.path.join(folder2, rel_path)
+    # --- Modified File Details ---
+    if modified:
+        doc.add_page_break()
+        doc.add_heading("📝 Modified File Details", level=1)
+        changes_only.add_heading("📝 Changed Lines in Modified Files", level=1)
 
-        if rel_path not in folder1_files:
-            added_files.append(rel_path)
-            doc.add_paragraph(f'Added File: {rel_path}').bold = True
-            lines = read_file_lines(path2)
-            for line in lines:
-                add_colored_paragraph(doc, line, RGBColor(0, 128, 0))
-            doc.add_paragraph()
-        elif rel_path not in folder2_files:
-            deleted_files.append(rel_path)
-            doc.add_paragraph(f'Deleted File: {rel_path}').bold = True
-            lines = read_file_lines(path1)
-            for line in lines:
-                add_colored_paragraph(doc, line, RGBColor(255, 0, 0))
-            doc.add_paragraph()
-        else:
-            lines1 = read_file_lines(path1)
-            lines2 = read_file_lines(path2)
-            if lines1 != lines2:
-                modified_files.append(rel_path)
-                compare_file_content(path1, path2, doc, mod_index)
-                mod_index += 1
+        for idx, (file, diffs) in enumerate(modified.items(), 1):
+            doc.add_heading(f"File {idx}: {file}", level=2)
+            changes_only.add_heading(f"File {idx}: {file}", level=2)
 
-    # Add summary at the top
-    summary_doc = Document()
-    add_table_summary(summary_doc, len(added_files), len(deleted_files), len(modified_files))
-    for element in doc.element.body:
-        summary_doc.element.body.append(element)
+            for change_type, line in diffs:
+                para1 = doc.add_paragraph()
+                para2 = changes_only.add_paragraph()
+                color = 'green' if change_type == 'add' else 'red'
+                highlight_text(para1, line, color)
+                highlight_text(para2, line, color)
 
-    summary_doc.save(output_docx_path)
-    print(f"✅ Document saved: {output_docx_path}")
+    doc.save("comparison_result.docx")
+    changes_only.save("modified_files_changes_only.docx")
+    print("✅ Docs saved as comparison_result.docx and modified_files_changes_only.docx")
 
-# === USAGE ===
-compare_folders('solution_v1', 'solution_v2', 'Comparison_Report.docx')
+def compare_folders(folder1, folder2):
+    files1 = get_all_files(folder1)
+    files2 = get_all_files(folder2)
+
+    added = [f for f in files2 if f not in files1]
+    removed = [f for f in files1 if f not in files2]
+
+    modified = {}
+    common_files = [f for f in files1 if f in files2]
+    for file in common_files:
+        diffs = get_diffs(files1[file], files2[file])
+        if diffs:
+            modified[file] = diffs
+
+    write_diff_to_docx(added, removed, modified)
+
+# Example usage
+if __name__ == "__main__":
+    folder_path_1 = "path/to/folder1"
+    folder_path_2 = "path/to/folder2"
+    compare_folders(folder_path_1, folder_path_2)
