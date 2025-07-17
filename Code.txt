@@ -1,289 +1,89 @@
 import os
 import difflib
-from docx import Document
-from docx.shared import RGBColor, Inches
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+import codecs
+from bs4 import BeautifulSoup
 
-def read_file_lines(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read().splitlines()
-    except Exception:
-        return []
+def read_file_content(file_path):
+    with codecs.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        return f.read()
 
-def get_all_files(folder):
-    all_files = {}
-    for root, _, files in os.walk(folder):
+def get_all_files(folder_path):
+    all_files = []
+    for root, dirs, files in os.walk(folder_path):
         for file in files:
-            relative_path = os.path.relpath(os.path.join(root, file), folder)
-            all_files[relative_path] = os.path.join(root, file)
+            relative_path = os.path.relpath(os.path.join(root, file), folder_path)
+            all_files.append(relative_path.replace("\\", "/"))
     return all_files
 
-def get_diffs(file1, file2):
-    lines1 = read_file_lines(file1)
-    lines2 = read_file_lines(file2)
+def generate_inline_diff(from_text, to_text):
+    differ = difflib.Differ()
+    from_lines = from_text.splitlines()
+    to_lines = to_text.splitlines()
 
-    diff = difflib.ndiff(lines1, lines2)
-    changes = []
-    for line in diff:
-        if line.startswith('+ '):
-            changes.append(('add', line[2:]))
-        elif line.startswith('- '):
-            changes.append(('remove', line[2:]))
-    return changes
+    html = difflib.HtmlDiff(wrapcolumn=120).make_file(from_lines, to_lines, context=True, numlines=3)
 
-def highlight_text(paragraph, text, color=None):
-    run = paragraph.add_run(text)
-    if color == 'green':
-        run.font.color.rgb = RGBColor(0, 128, 0)
-    elif color == 'red':
-        run.font.color.rgb = RGBColor(255, 0, 0)
-    return run
+    soup = BeautifulSoup(html, 'html.parser')
 
-def write_diff_to_docx(added, removed, modified):
-    doc = Document()
-    changes_only = Document()
+    for table in soup.find_all('table'):
+        table['style'] = 'border-collapse: collapse; width: 100%;'
+    for td in soup.find_all('td'):
+        td['style'] = 'padding: 4px; font-family: monospace;'
 
-    # --- Summary Header ---
-    doc.add_heading('📄 File Comparison Summary', level=1)
+    for tag in soup.find_all(['td', 'th']):
+        if 'diff_add' in tag.get('class', []):
+            tag['style'] += ' color: green; font-weight: bold;'
+        elif 'diff_sub' in tag.get('class', []):
+            tag['style'] += ' color: red; font-weight: bold;'
+        elif 'diff_chg' in tag.get('class', []):
+            tag['style'] += ' color: orange; font-weight: bold;'
 
-    # Summary Table
-    table = doc.add_table(rows=2, cols=3)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = '🟢 Added Files'
-    hdr_cells[1].text = '🔴 Removed Files'
-    hdr_cells[2].text = '🟡 Modified Files'
+    return str(soup)
 
-    val_cells = table.rows[1].cells
-    val_cells[0].text = str(len(added))
-    val_cells[1].text = str(len(removed))
-    val_cells[2].text = str(len(modified))
+def compare_folders(folder1, folder2, output_file):
+    files1 = set(get_all_files(folder1))
+    files2 = set(get_all_files(folder2))
 
-    doc.add_paragraph()  # Spacer
+    added_files = sorted(list(files2 - files1))
+    deleted_files = sorted(list(files1 - files2))
+    common_files = sorted(list(files1 & files2))
 
-    doc.add_heading("🟢 Added Files", level=2)
-    if added:
-        for idx, file in enumerate(added, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
+    modified_files = []
+    diff_sections = []
+    file_counter = 1
 
-    doc.add_heading("🔴 Removed Files", level=2)
-    if removed:
-        for idx, file in enumerate(removed, 1):
-            doc.add_paragraph(f"File {idx}: {file}")
-    else:
-        doc.add_paragraph("None")
-
-    doc.add_heading("🟡 Modified Files", level=2)
-    if modified:
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_paragraph(f"File {idx}: {file} (Changed lines: {len(diffs)})")
-    else:
-        doc.add_paragraph("None")
-
-    # --- Modified File Details ---
-    if modified:
-        doc.add_page_break()
-        doc.add_heading("📝 Modified File Details", level=1)
-        changes_only.add_heading("📝 Changed Lines in Modified Files", level=1)
-
-        for idx, (file, diffs) in enumerate(modified.items(), 1):
-            doc.add_heading(f"File {idx}: {file}", level=2)
-            changes_only.add_heading(f"File {idx}: {file}", level=2)
-
-            for change_type, line in diffs:
-                para1 = doc.add_paragraph()
-                para2 = changes_only.add_paragraph()
-                color = 'green' if change_type == 'add' else 'red'
-                highlight_text(para1, line, color)
-                highlight_text(para2, line, color)
-
-    doc.save("comparison_result.docx")
-    changes_only.save("modified_files_changes_only.docx")
-    print("✅ Docs saved as comparison_result.docx and modified_files_changes_only.docx")
-
-def compare_folders(folder1, folder2):
-    files1 = get_all_files(folder1)
-    files2 = get_all_files(folder2)
-
-    added = [f for f in files2 if f not in files1]
-    removed = [f for f in files1 if f not in files2]
-
-    modified = {}
-    common_files = [f for f in files1 if f in files2]
     for file in common_files:
-        diffs = get_diffs(files1[file], files2[file])
-        if diffs:
-            modified[file] = diffs
+        path1 = os.path.join(folder1, file)
+        path2 = os.path.join(folder2, file)
 
-    write_diff_to_docx(added, removed, modified)
+        content1 = read_file_content(path1)
+        content2 = read_file_content(path2)
 
-# Example usage
-if __name__ == "__main__":
-    folder_path_1 = "path/to/folder1"
-    folder_path_2 = "path/to/folder2"
-    compare_folders(folder_path_1, folder_path_2)
+        if content1 != content2:
+            modified_files.append(file)
+            file_diff = generate_inline_diff(content1, content2)
+            diff_sections.append(f"<h2>File {file_counter}: {file}</h2>\n{file_diff}")
+            file_counter += 1
 
+    # Print console summary (not in HTML)
+    print("\n===== 🔍 SUMMARY =====")
+    print(f"{'Category':<20} | {'Count':<5}")
+    print("-" * 30)
+    print(f"{'Added Files':<20} | {len(added_files):<5}")
+    print(f"{'Deleted Files':<20} | {len(deleted_files):<5}")
+    print(f"{'Modified Files':<20} | {len(modified_files):<5}")
+    print("=" * 30 + "\n")
 
-This above code works fine for workflows issue but doesn’t work for new word added Becoz of which the lines are shifted then whole para is highlighted (that untitled issue)
+    # Generate HTML with only diffs (no summary)
+    full_html = "<html><head><meta charset='UTF-8'></head><body>" + ''.join(diff_sections) + "</body></html>"
 
-import os
-from pathlib import Path
-from xml.etree import ElementTree as ET
-from difflib import SequenceMatcher, Differ
-from docx import Document
-from docx.shared import RGBColor
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(full_html)
 
+    print(f"✅ Comparison report generated: {output_file}")
 
-def is_xml_file(file_path):
-    return file_path.endswith('.xml') or file_path.endswith('.html')
+# Example usage:
+folder1 = "SolutionFolder_V1"
+folder2 = "SolutionFolder_V2"
+output_file = "comparison_report.html"
 
-
-def flatten_xml(elem, depth=0):
-    lines = []
-    indent = '  ' * depth
-    lines.append(f"{indent}<{elem.tag}>")
-    if elem.text and elem.text.strip():
-        lines.append(f"{indent}  {elem.text.strip()}")
-    for child in elem:
-        lines.extend(flatten_xml(child, depth + 1))
-    lines.append(f"{indent}</{elem.tag}>")
-    return lines
-
-
-def read_file_lines(file_path):
-    file_path = str(file_path)
-    try:
-        if is_xml_file(file_path):
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-            return flatten_xml(root)
-        else:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                return [line.rstrip() for line in f]
-    except Exception as e:
-        return [f"<<Error reading file: {e}>>\n"]
-
-
-def highlight_diff(doc, old_line, new_line, minimal=False):
-    para_add = doc.add_paragraph()
-    para_del = doc.add_paragraph()
-
-    old_tokens = old_line.strip().split()
-    new_tokens = new_line.strip().split()
-
-    inserted = [token for token in new_tokens if token not in old_tokens]
-    deleted = [token for token in old_tokens if token not in new_tokens]
-
-    for token in new_tokens:
-        run = para_add.add_run(token + ' ')
-        if token in inserted:
-            run.font.color.rgb = RGBColor(0, 128, 0)  # Green
-            run.bold = True
-        elif not minimal:
-            run.bold = True
-
-    for token in old_tokens:
-        run = para_del.add_run(token + ' ')
-        if token in deleted:
-            run.font.color.rgb = RGBColor(255, 0, 0)  # Red
-            run.bold = True
-        elif not minimal:
-            run.bold = True
-
-
-def compare_solutions_dual_docx(folder1, folder2, output_full_docx, output_diff_docx):
-    full_doc = Document()
-    diff_doc = Document()
-
-    full_doc.add_heading('PowerApps Full Comparison Report', level=1)
-    diff_doc.add_heading('PowerApps Changes-Only Report', level=1)
-
-    path1 = Path(folder1)
-    path2 = Path(folder2)
-
-    files1 = {str(p.relative_to(path1)) for p in path1.rglob('*') if p.is_file()}
-    files2 = {str(p.relative_to(path2)) for p in path2.rglob('*') if p.is_file()}
-
-    added = sorted(files2 - files1)
-    deleted = sorted(files1 - files2)
-    common = sorted(files1 & files2)
-    modified = []
-
-    # === Summary Table ===
-    diff_doc.add_heading("📊 Summary", level=2)
-    table = diff_doc.add_table(rows=4, cols=2)
-    table.style = 'Table Grid'
-    table.cell(0, 0).text = "Category"
-    table.cell(0, 1).text = "Count"
-    table.cell(1, 0).text = "Added Files"
-    table.cell(2, 0).text = "Deleted Files"
-    table.cell(3, 0).text = "Modified Files"
-    table.cell(1, 1).text = str(len(added))
-    table.cell(2, 1).text = str(len(deleted))
-
-    # === Added Files ===
-    full_doc.add_heading('🔼 Added Files', level=2)
-    diff_doc.add_heading('🔼 Added Files', level=2)
-    for i, f in enumerate(added, start=1):
-        full_doc.add_paragraph(f"{i}. 🟢 {f}")
-        diff_doc.add_paragraph(f"{i}. 🟢 {f}")
-
-    # === Deleted Files ===
-    full_doc.add_heading('🔽 Deleted Files', level=2)
-    diff_doc.add_heading('🔽 Deleted Files', level=2)
-    for i, f in enumerate(deleted, start=1):
-        full_doc.add_paragraph(f"{i}. 🔴 {f}")
-        diff_doc.add_paragraph(f"{i}. 🔴 {f}")
-
-    # === Modified Files ===
-    full_doc.add_heading('📝 Modified Files', level=2)
-    diff_doc.add_heading('📝 Modified Files', level=2)
-
-    mod_count = 0
-    for rel_path in common:
-        f1 = path1 / rel_path
-        f2 = path2 / rel_path
-
-        lines1 = read_file_lines(f1)
-        lines2 = read_file_lines(f2)
-
-        if SequenceMatcher(None, lines1, lines2).ratio() < 1.0:
-            mod_count += 1
-            modified.append(rel_path)
-            full_doc.add_paragraph(f"File {mod_count}: 📄 {rel_path}", style='Heading 3')
-            diff_doc.add_paragraph(f"File {mod_count}: 📄 {rel_path}", style='Heading 3')
-
-            matcher = SequenceMatcher(None, lines1, lines2)
-            for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-                if tag == 'equal':
-                    for line in lines1[i1:i2]:
-                        full_doc.add_paragraph(line)
-                elif tag == 'replace':
-                    for old, new in zip(lines1[i1:i2], lines2[j1:j2]):
-                        highlight_diff(full_doc, old, new, minimal=False)
-                        highlight_diff(diff_doc, old, new, minimal=True)
-                elif tag == 'delete':
-                    for old in lines1[i1:i2]:
-                        highlight_diff(full_doc, old, "", minimal=False)
-                        highlight_diff(diff_doc, old, "", minimal=True)
-                elif tag == 'insert':
-                    for new in lines2[j1:j2]:
-                        highlight_diff(full_doc, "", new, minimal=False)
-                        highlight_diff(diff_doc, "", new, minimal=True)
-
-    # Finalize summary
-    table.cell(3, 1).text = str(mod_count)
-
-    # Save
-    full_doc.save(output_full_docx)
-    diff_doc.save(output_diff_docx)
-    print(f"✅ Full report saved: {output_full_docx}")
-    print(f"✅ Changes-only report saved: {output_diff_docx}")
-
-This code words for that untitled issues but not for workflow issues
-
-So give me a consolidated code which will work fine for both scenarios
+compare_folders(folder1, folder2, output_file)
