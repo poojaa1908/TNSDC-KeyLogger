@@ -1,91 +1,115 @@
 import os
 import difflib
-import codecs
-from bs4 import BeautifulSoup
+from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from docx.enum.text import WD_COLOR_INDEX
 
-def read_file_content(file_path):
-    with codecs.open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-        return f.read()
+# Paths
+old_folder = 'solution_old'
+new_folder = 'solution_new'
+output_doc = 'PowerApps_Solution_Comparison.docx'
 
-def get_all_files(folder_path):
-    all_files = []
-    for root, dirs, files in os.walk(folder_path):
-        for file in files:
-            relative_path = os.path.relpath(os.path.join(root, file), folder_path)
-            all_files.append(relative_path.replace("\\", "/"))
-    return all_files
+# Helpers
+def read_file_content(path):
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        return f.read().splitlines()
 
-def generate_inline_diff(from_text, to_text):
-    differ = difflib.Differ()
-    from_lines = from_text.splitlines()
-    to_lines = to_text.splitlines()
+def add_colored_line(paragraph, line, color):
+    run = paragraph.add_run(line)
+    run.font.name = 'Courier New'
+    run.font.size = Pt(9)
+    rPr = run._element.get_or_add_rPr()
+    highlight = OxmlElement('w:highlight')
+    highlight.set(qn('w:val'), color)
+    rPr.append(highlight)
 
-    html = difflib.HtmlDiff(wrapcolumn=120).make_file(from_lines, to_lines, context=True, numlines=3)
+# Main containers
+added_files, deleted_files, modified_files = [], [], []
+mod_file_diffs = []
 
-    soup = BeautifulSoup(html, 'html.parser')
+# Scan files
+old_files_set = set()
+new_files_set = set()
 
-    for table in soup.find_all('table'):
-        table['style'] = 'border-collapse: collapse; width: 100%;'
-    for td in soup.find_all('td'):
-        td['style'] = 'padding: 4px; font-family: monospace;'
+for dirpath, _, files in os.walk(old_folder):
+    for f in files:
+        rel = os.path.relpath(os.path.join(dirpath, f), old_folder)
+        old_files_set.add(rel)
 
-    for tag in soup.find_all(['td', 'th']):
-        if 'diff_add' in tag.get('class', []):
-            tag['style'] += ' color: green; font-weight: bold;'
-        elif 'diff_sub' in tag.get('class', []):
-            tag['style'] += ' color: red; font-weight: bold;'
-        elif 'diff_chg' in tag.get('class', []):
-            tag['style'] += ' color: orange; font-weight: bold;'
+for dirpath, _, files in os.walk(new_folder):
+    for f in files:
+        rel = os.path.relpath(os.path.join(dirpath, f), new_folder)
+        new_files_set.add(rel)
 
-    return str(soup)
+added_files = sorted(list(new_files_set - old_files_set))
+deleted_files = sorted(list(old_files_set - new_files_set))
+common_files = sorted(list(new_files_set & old_files_set))
 
-def compare_folders(folder1, folder2, output_file):
-    files1 = set(get_all_files(folder1))
-    files2 = set(get_all_files(folder2))
+# Modified files detection
+for file in common_files:
+    old_path = os.path.join(old_folder, file)
+    new_path = os.path.join(new_folder, file)
 
-    added_files = sorted(list(files2 - files1))
-    deleted_files = sorted(list(files1 - files2))
-    common_files = sorted(list(files1 & files2))
+    old_lines = read_file_content(old_path)
+    new_lines = read_file_content(new_path)
 
-    modified_files = []
-    diff_sections = []
-    file_counter = 1
+    if old_lines != new_lines:
+        diff = list(difflib.ndiff(old_lines, new_lines))
+        mod_file_diffs.append((file, diff))
+        modified_files.append(file)
 
-    for file in common_files:
-        path1 = os.path.join(folder1, file)
-        path2 = os.path.join(folder2, file)
+# Create DOCX report
+doc = Document()
+doc.add_heading('PowerApps Solution Comparison Report', level=1)
 
-        content1 = read_file_content(path1)
-        content2 = read_file_content(path2)
+# Summary Table
+doc.add_heading('Summary', level=2)
+table = doc.add_table(rows=5, cols=2)
+table.style = 'Table Grid'
+summary = [
+    ('Total files in old solution', str(len(old_files_set))),
+    ('Total files in new solution', str(len(new_files_set))),
+    ('Added files', str(len(added_files))),
+    ('Deleted files', str(len(deleted_files))),
+    ('Modified files', str(len(modified_files))),
+]
 
-        if content1 != content2:
-            modified_files.append(file)
-            file_diff = generate_inline_diff(content1, content2)
-            diff_sections.append(f"<h2>File {file_counter}: {file}</h2>\n{file_diff}")
-            file_counter += 1
+for i, (key, value) in enumerate(summary):
+    table.cell(i, 0).text = key
+    table.cell(i, 1).text = value
 
-    # Generate plain text summary
-    summary_text = (
-        "===== SUMMARY =====\n"
-        f"Added Files   : {len(added_files)}\n"
-        f"Deleted Files : {len(deleted_files)}\n"
-        f"Modified Files: {len(modified_files)}\n"
-        "====================\n\n"
-    )
+# Added Files
+if added_files:
+    doc.add_heading('\nAdded Files', level=2)
+    for idx, f in enumerate(added_files, 1):
+        doc.add_paragraph(f"File {idx}: {f}")
 
-    # HTML diffs only
-    html_diff_body = "<html><head><meta charset='UTF-8'></head><body>" + ''.join(diff_sections) + "</body></html>"
+# Deleted Files
+if deleted_files:
+    doc.add_heading('\nDeleted Files', level=2)
+    for idx, f in enumerate(deleted_files, 1):
+        doc.add_paragraph(f"File {idx}: {f}")
 
-    # Write final file: plain text summary followed by HTML
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(summary_text)
-        f.write(html_diff_body)
+# Modified Files
+if modified_files:
+    doc.add_heading('\nModified Files', level=2)
+    for idx, (filename, diff_lines) in enumerate(mod_file_diffs, 1):
+        doc.add_paragraph(f"\nFile {idx}: {filename}", style='Heading 3')
+        for line in diff_lines:
+            if line.startswith('- '):
+                add_colored_line(doc.add_paragraph(), line[2:], 'red')
+            elif line.startswith('+ '):
+                add_colored_line(doc.add_paragraph(), line[2:], 'green')
+            elif line.startswith('? '):
+                continue  # skip pointer lines
+            else:
+                p = doc.add_paragraph()
+                run = p.add_run(line[2:])
+                run.font.name = 'Courier New'
+                run.font.size = Pt(9)
 
-    print(f"✅ Comparison report generated: {output_file}")
-
-# Example usage:
-folder1 = "SolutionFolder_V1"
-folder2 = "SolutionFolder_V2"
-output_file = "comparison_report.html"
-
-compare_folders(folder1, folder2, output_file)
+# Save output
+doc.save(output_doc)
+print(f"Saved report: {output_doc}")
