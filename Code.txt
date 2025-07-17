@@ -1,7 +1,9 @@
 import os
 import difflib
 from docx import Document
-from docx.shared import RGBColor
+from docx.shared import RGBColor, Inches
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 def read_file_lines(file_path):
     try:
@@ -43,8 +45,23 @@ def write_diff_to_docx(added, removed, modified):
     doc = Document()
     changes_only = Document()
 
-    # --- Summary ---
+    # --- Summary Header ---
     doc.add_heading('📄 File Comparison Summary', level=1)
+
+    # Summary Table
+    table = doc.add_table(rows=2, cols=3)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = '🟢 Added Files'
+    hdr_cells[1].text = '🔴 Removed Files'
+    hdr_cells[2].text = '🟡 Modified Files'
+
+    val_cells = table.rows[1].cells
+    val_cells[0].text = str(len(added))
+    val_cells[1].text = str(len(removed))
+    val_cells[2].text = str(len(modified))
+
+    doc.add_paragraph()  # Spacer
 
     doc.add_heading("🟢 Added Files", level=2)
     if added:
