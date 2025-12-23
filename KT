@@ -1,0 +1,48 @@
+Transformers
+
+Day 0 - HIGH LEVEL OVERVIEW
+
+XN - it has a legacy app(seq and blocking flow) and migrating monolithic app to microservices arch
+
+2 squad
+1 - legacy app(connect with business) - adding new feature and plugins - get business details and new on boarding- new dev - db related changes and code level changes
+2 - migration work 
+
+Conversion services
+
+Docs in form of zip, tart
+
+Business rules + validation on that doc
+
+To do the needed conversions and send to downstream
+
+Whenever we see changes in agreed format - resend to upstream
+
+Also dealing with print related operations 
+
+ECR - no 
+
+Nas and s3 based storage 
+Sand based storage
+
+Mq and kafka 
+
+KT DAY 1
+
+OneXN - legacy app
+
+Confluence page - Process Config Inventory - contains all process and products
+
+Process - list of action items on docs from upstream and pass to downstream - imp set of rules - (Input) Raw doc - (Output) Conv doc
+
+So migration takes place process level 
+Even legacy will contain that process as our expectation is to manage volume and be highly available
+
+In legacy app, whenever we are onboarding any new process, reuse the already existing action classes
+
+Control plane : 1XN dashboard for dev to get all action items info and more
+Use QAEnt login
+
+DB:
+Imp tables - Process config - fetch id 
+Then use in 
