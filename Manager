@@ -19,3 +19,9 @@ Problem Statement 3: AI Meeting Summary & Insight Extraction
 Teams spend significant time attending or replaying live and recorded meetings to capture decisions, risks, and action items, impacting execution speed.
 
 There is a need for an AI-driven capability that can analyze live or recorded meeting content and automatically generate concise summaries, key insights, and actionable outcomes without requiring full manual review.
+
+Problem Statement: Intelligent Tab Context & Reminder Assistant
+
+Knowledge workers often keep multiple browser tabs open for extended periods without clear visibility into their original purpose or pending actions. Over time, this leads to forgotten tasks, missed follow-ups (e.g., awaiting query results, approvals, submissions), reduced productivity, and cognitive overload.
+
+There is a need for a contextual browser assistant that can track the intent behind open tabs, detect pending actions or expected outcomes, and proactively send timely reminders or notifications when follow-ups are required or outputs are likely available
