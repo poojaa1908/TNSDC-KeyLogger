@@ -1,0 +1,21 @@
+Problem Statement 1: AI-Driven Test Plan Generation
+
+Requirements are distributed across tools like Confluence, Jira, and Figma, requiring QA teams to manually consolidate information to create test plans. This process is time-consuming, inconsistent, and prone to gaps in coverage, leading to delayed QA cycles and quality risks.
+
+There is a need for an intelligent solution that can automatically interpret distributed requirement artifacts and generate structured, traceable test plans with minimal manual effort.
+
+⸻
+
+Problem Statement 2: Intelligent Email Digest & Smart Reply
+
+High email volumes require manual triaging and repetitive responses, reducing productivity and increasing the risk of missed action items—especially after returning from leave or periods of high activity.
+
+There is a need for a contextual email intelligence system that can generate concise digests, prioritize critical threads, extract action items, and suggest context-aware replies to accelerate inbox recovery and response efficiency.
+
+⸻
+
+Problem Statement 3: AI Meeting Summary & Insight Extraction
+
+Teams spend significant time attending or replaying live and recorded meetings to capture decisions, risks, and action items, impacting execution speed.
+
+There is a need for an AI-driven capability that can analyze live or recorded meeting content and automatically generate concise summaries, key insights, and actionable outcomes without requiring full manual review.
